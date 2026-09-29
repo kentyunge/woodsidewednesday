@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { golfers, historicalRounds, matchEntries, matches, seasonPlayers, seasons, user, weeks } from "@/db/schema";
 import { addDays } from "@/lib/dates";
@@ -141,6 +141,43 @@ export async function updateSeason(id: number, input: Partial<SeasonInput>) {
   const [s] = await db.update(seasons).set(input).where(eq(seasons.id, id)).returning();
   if (!s) throw notFound("Season not found");
   if (input.status === "active") await deactivateOthers(id);
+  return s;
+}
+
+export interface SeasonSummary {
+  season: typeof seasons.$inferSelect;
+  players: number;
+  weeks: number;
+  scores: number;
+}
+
+/** Every season with its player, week and entered-score counts, newest first. */
+export async function listSeasonSummaries(): Promise<SeasonSummary[]> {
+  const n = sql<number>`count(*)::int`;
+  const [all, playerCounts, weekCounts, scoreCounts] = await Promise.all([
+    db.select().from(seasons).orderBy(desc(seasons.year), desc(seasons.id)),
+    db.select({ id: seasonPlayers.seasonId, n }).from(seasonPlayers).groupBy(seasonPlayers.seasonId),
+    db.select({ id: weeks.seasonId, n }).from(weeks).groupBy(weeks.seasonId),
+    db
+      .select({ id: weeks.seasonId, n })
+      .from(matchEntries)
+      .innerJoin(matches, eq(matchEntries.matchId, matches.id))
+      .innerJoin(weeks, eq(matches.weekId, weeks.id))
+      .groupBy(weeks.seasonId),
+  ]);
+  const count = (rows: { id: number; n: number }[], id: number) => rows.find((r) => r.id === id)?.n ?? 0;
+  return all.map((season) => ({
+    season,
+    players: count(playerCounts, season.id),
+    weeks: count(weekCounts, season.id),
+    scores: count(scoreCounts, season.id),
+  }));
+}
+
+/** Delete a season with its players, schedule and scores. Golfers and their other rounds stay. */
+export async function deleteSeason(id: number) {
+  const [s] = await db.delete(seasons).where(eq(seasons.id, id)).returning();
+  if (!s) throw notFound("Season not found");
   return s;
 }
 

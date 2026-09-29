@@ -2,15 +2,17 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { golfers, matchEntries, user, weeks } from "@/db/schema";
+import { golfers, historicalRounds, matchEntries, user, weeks } from "@/db/schema";
 import { addDays } from "@/lib/dates";
 import { linkGolferForUser, type Actor } from "./access";
 import {
   addHistoricalRounds,
   createGolfer,
   createSeason,
+  deleteSeason,
   generatePositionNight,
   generateSchedule,
+  listSeasonSummaries,
   postponeWeek,
   setSeasonPlayers,
   updateGolfer,
@@ -183,3 +185,27 @@ describe("league flow", () => {
     expect((await db.select().from(matchEntries)).length).toBeGreaterThan(0);
   });
 });
+
+describe("deleting a season", () => {
+  it("removes its players, schedule and scores but keeps golfers and history", async () => {
+    const summary = (await listSeasonSummaries()).find((s) => s.season.id === seasonId)!;
+    expect(summary.players).toBe(4);
+    expect(summary.weeks).toBe(4);
+    expect(summary.scores).toBeGreaterThan(0);
+
+    const golfersBefore = (await db.select().from(golfers)).length;
+    const historicalBefore = (await loadSeasonHistoryCount());
+    await deleteSeason(seasonId);
+
+    expect((await listSeasonSummaries()).some((s) => s.season.id === seasonId)).toBe(false);
+    expect(await db.select().from(weeks).where(eq(weeks.seasonId, seasonId))).toHaveLength(0);
+    expect(await db.select().from(matchEntries)).toHaveLength(0);
+    expect((await db.select().from(golfers)).length).toBe(golfersBefore);
+    expect(await loadSeasonHistoryCount()).toBe(historicalBefore);
+    await expect(deleteSeason(seasonId)).rejects.toThrow(/not found/);
+  });
+});
+
+async function loadSeasonHistoryCount() {
+  return (await db.select().from(historicalRounds)).length;
+}

@@ -9,6 +9,7 @@ import * as admin from "../admin";
 import { HttpError, notFound } from "../errors";
 import { getCurrentSeason, getSeasons, loadSeason } from "../league";
 import { clearEntry, editAccess, getMatch, saveEntry } from "../scores";
+import { golferRounds, listSubs } from "../golfers";
 import { golferSeasonStats, leagueStats } from "../stats";
 import * as S from "./schemas";
 
@@ -533,10 +534,18 @@ api.openapi(
 );
 
 api.openapi(
-  route({ method: "post", path: "/golfers", tags: ["Golfers"], summary: "Add a golfer", request: body(S.GolferInput), responses: json(S.Golfer) }),
+  route({
+    method: "post",
+    path: "/golfers",
+    tags: ["Golfers"],
+    summary: "Add a golfer or sub, optionally with previous scores",
+    request: body(S.NewGolferInput),
+    responses: json(S.Golfer),
+  }),
   async (c) => {
     requireAdmin(c.get("actor"));
-    return c.json(await admin.createGolfer(c.req.valid("json")), 200);
+    const { previousRounds, ...input } = c.req.valid("json");
+    return c.json(await admin.createGolfer(input, previousRounds), 200);
   },
 );
 
@@ -572,6 +581,35 @@ api.openapi(
       .innerJoin(seasons, eq(seasonPlayers.seasonId, seasons.id))
       .where(eq(seasonPlayers.golferId, c.req.valid("param").id));
     return c.json(rows.map((r) => r.s), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "get",
+    path: "/golfers/{id}/rounds",
+    tags: ["Golfers", "Handicaps"],
+    summary: "Every round on record for a golfer, and the handicap they carry into their next round",
+    request: { params: S.IdParam },
+    responses: json(S.GolferRounds),
+  }),
+  async (c) => {
+    requireActor(c.get("actor"));
+    return c.json(await golferRounds(c.req.valid("param").id), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "get",
+    path: "/subs",
+    tags: ["Golfers"],
+    summary: "Active golfers who aren't regulars in the current season",
+    responses: json(z.array(S.SubRow)),
+  }),
+  async (c) => {
+    requireActor(c.get("actor"));
+    return c.json(await listSubs(), 200);
   },
 );
 

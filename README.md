@@ -71,6 +71,8 @@ Open http://localhost:3000, choose **Email link**, enter your admin email, and c
 5. In the season's **Schedule** tab, pick the first Wednesday and click **Generate**.
 6. After week 11: **Schedule → Week 12 → Pair from standings**.
 
+**Subs:** add them under **Admin → Subs**, with any previous 9-hole scores. Three or more scores give them an established handicap before their first night; otherwise they play at 80% of that night's round until they have three. Each golfer's page shows their handicap, how it was calculated, and every round on record.
+
 A season you no longer need can be removed from its **Details** tab. Its schedule and scores are deleted, but golfers and carried-over rounds are kept.
 
 ## API

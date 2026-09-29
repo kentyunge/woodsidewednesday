@@ -103,6 +103,11 @@ export interface RoundRecord {
   source: "match" | "historical";
   seasonId: number | null;
   weekId: number | null;
+  /** League round: the match it was played in. */
+  matchId?: number;
+  /** Carried-over round: its id (for editing) and note. */
+  historicalId?: number;
+  note?: string | null;
 }
 
 export function rulesFor(season: Season): HandicapRules {
@@ -124,7 +129,7 @@ export async function getCurrentSeason(): Promise<Season | null> {
   return all.find((s) => s.status === "active") ?? all[0] ?? null;
 }
 
-async function loadCoursePars() {
+export async function loadCoursePars() {
   const rows = await db.select().from(holesTable).orderBy(asc(holesTable.number));
   const byCourse = new Map<number, Hole[]>();
   for (const r of rows) {
@@ -136,7 +141,7 @@ async function loadCoursePars() {
 }
 
 /** Every completed round for every golfer, all seasons, oldest first. */
-async function loadHistory(courseHoles: Map<number, Hole[]>): Promise<Map<number, RoundRecord[]>> {
+export async function loadHistory(courseHoles: Map<number, Hole[]>): Promise<Map<number, RoundRecord[]>> {
   const rows = await db
     .select({
       status: matchEntries.status,
@@ -145,6 +150,7 @@ async function loadHistory(courseHoles: Map<number, Hole[]>): Promise<Map<number
       scores: matchEntries.scores,
       golferAId: matches.golferAId,
       golferBId: matches.golferBId,
+      matchId: matches.id,
       weekId: weeks.id,
       date: weeks.date,
       seasonId: seasons.id,
@@ -170,7 +176,15 @@ async function loadHistory(courseHoles: Map<number, Hole[]>): Promise<Map<number
     if (!golferId) continue;
     const gross = r.scores.reduce((s, v) => s + v, 0);
     const par = card.reduce((s, h) => s + h.par, 0);
-    push(golferId, { date: r.date, diff: gross - par, gross, source: "match", seasonId: r.seasonId, weekId: r.weekId });
+    push(golferId, {
+      date: r.date,
+      diff: gross - par,
+      gross,
+      source: "match",
+      seasonId: r.seasonId,
+      weekId: r.weekId,
+      matchId: r.matchId,
+    });
   }
 
   for (const h of await db.select().from(historicalRounds)) {
@@ -181,6 +195,8 @@ async function loadHistory(courseHoles: Map<number, Hole[]>): Promise<Map<number
       source: "historical",
       seasonId: null,
       weekId: null,
+      historicalId: h.id,
+      note: h.note,
     });
   }
 

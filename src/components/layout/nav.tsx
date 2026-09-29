@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Flag, LayoutDashboard, LogOut, Menu, Settings, Shield, User, Users } from "lucide-react";
@@ -17,6 +18,8 @@ interface NavProps {
 export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
+  // Controlled so tapping a link (client-side navigation) closes the mobile menu.
+  const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     { href: "/", label: "League", icon: LayoutDashboard },
     ...(hasGolfer ? [{ href: "/me", label: "My Stats", icon: User }] : []),
@@ -27,6 +30,7 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
   const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   async function signOut() {
+    setMenuOpen(false);
     await authClient.signOut();
     router.push("/login");
     router.refresh();
@@ -62,7 +66,7 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
             <LogOut />
           </Button>
         </div>
-        <Sheet>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="ml-auto hover:bg-white/15 hover:text-primary-foreground md:hidden">
               <Menu />
@@ -78,6 +82,7 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
                 <Link
                   key={l.href}
                   href={l.href}
+                  onClick={() => setMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium hover:bg-accent",
                     active(l.href) && "bg-accent",

@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { golfers } from "@/db/schema";
+import { golfers, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { forbidden, unauthorized } from "./errors";
 
@@ -17,23 +17,35 @@ export async function getActor(headers: Headers): Promise<Actor | null> {
   const session = await auth.api.getSession({ headers });
   if (!session) return null;
   const u = session.user as typeof session.user & { role?: string; username?: string | null };
-  let [g] = await db.select({ id: golfers.id }).from(golfers).where(eq(golfers.userId, u.id)).limit(1);
-  if (!g) {
-    // Golfer may have been added after this login was created: link by email.
-    [g] = await db
-      .update(golfers)
-      .set({ userId: u.id })
-      .where(sql`lower(${golfers.email}) = ${u.email.toLowerCase()} and ${golfers.userId} is null`)
-      .returning({ id: golfers.id });
-  }
+  const golferId = await linkGolferForUser(u.id, u.email);
   return {
     userId: u.id,
     name: u.name,
     email: u.email,
     username: u.username ?? null,
     isAdmin: u.role === "admin",
-    golferId: g?.id ?? null,
+    golferId,
   };
+}
+
+/**
+ * The golfer this login belongs to. Links by email when the golfer has no login yet,
+ * or when their current login is for a different address (e.g. the admin replaced a
+ * test email with the real one after the golfer had signed in with it).
+ */
+export async function linkGolferForUser(userId: string, email: string): Promise<number | null> {
+  const [linked] = await db.select({ id: golfers.id }).from(golfers).where(eq(golfers.userId, userId)).limit(1);
+  if (linked) return linked.id;
+  const [g] = await db
+    .update(golfers)
+    .set({ userId })
+    .where(
+      sql`lower(${golfers.email}) = ${email.toLowerCase()} and (${golfers.userId} is null or not exists (
+        select 1 from ${user} where ${user.id} = ${golfers.userId} and lower(${user.email}) = lower(${golfers.email})
+      ))`,
+    )
+    .returning({ id: golfers.id });
+  return g?.id ?? null;
 }
 
 export function requireActor(actor: Actor | null): Actor {

@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { golfers, historicalRounds, matchEntries, matches, seasonPlayers, seasons, weeks } from "@/db/schema";
+import { golfers, historicalRounds, matchEntries, matches, seasonPlayers, seasons, user, weeks } from "@/db/schema";
 import { addDays } from "@/lib/dates";
 import { positionNight, roundRobin, shuffle } from "@/lib/scoring";
 import { ensureDefaultCourse } from "./bootstrap";
@@ -31,18 +31,41 @@ export async function createGolfer(input: GolferInput) {
 }
 
 export async function updateGolfer(id: number, input: Partial<GolferInput>) {
-  const [g] = await db
-    .update(golfers)
-    .set({
-      ...(input.name !== undefined && { name: input.name.trim() }),
-      ...(input.email !== undefined && { email: normEmail(input.email) }),
-      ...(input.phone !== undefined && { phone: input.phone }),
-      ...(input.active !== undefined && { active: input.active }),
-    })
-    .where(eq(golfers.id, id))
-    .returning();
-  if (!g) throw notFound("Golfer not found");
-  return g;
+  return db.transaction(async (tx) => {
+    const [before] = await tx.select().from(golfers).where(eq(golfers.id, id));
+    if (!before) throw notFound("Golfer not found");
+    const email = input.email !== undefined ? normEmail(input.email) : before.email;
+    let userId = before.userId;
+
+    // A changed email carries the golfer's login with it.
+    if (email && email !== before.email?.toLowerCase()) {
+      const [existing] = await tx.select({ id: user.id }).from(user).where(sql`lower(${user.email}) = ${email}`);
+      if (existing) {
+        // They already signed in with the new address: attach that login instead.
+        userId = existing.id;
+        await tx
+          .update(golfers)
+          .set({ userId: null })
+          .where(and(eq(golfers.userId, existing.id), sql`${golfers.id} <> ${id}`));
+      } else if (before.userId) {
+        // Move their existing login (and any username/password) to the new address.
+        await tx.update(user).set({ email, emailVerified: false }).where(eq(user.id, before.userId));
+      }
+    }
+
+    const [g] = await tx
+      .update(golfers)
+      .set({
+        ...(input.name !== undefined && { name: input.name.trim() }),
+        ...(input.email !== undefined && { email }),
+        ...(input.phone !== undefined && { phone: input.phone }),
+        ...(input.active !== undefined && { active: input.active }),
+        userId,
+      })
+      .where(eq(golfers.id, id))
+      .returning();
+    return g;
+  });
 }
 
 // ---------- historical rounds (handicap carry-over) ----------

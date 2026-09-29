@@ -2,9 +2,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { matchEntries, user, weeks } from "@/db/schema";
+import { golfers, matchEntries, user, weeks } from "@/db/schema";
 import { addDays } from "@/lib/dates";
-import type { Actor } from "./access";
+import { linkGolferForUser, type Actor } from "./access";
 import {
   addHistoricalRounds,
   createGolfer,
@@ -13,6 +13,7 @@ import {
   generateSchedule,
   postponeWeek,
   setSeasonPlayers,
+  updateGolfer,
 } from "./admin";
 import { ensureDefaultCourse } from "./bootstrap";
 import { loadSeason } from "./league";
@@ -43,6 +44,51 @@ beforeAll(async () => {
   const s = await createSeason({ name: "Test", year: 2026, startDate: "2026-05-06", status: "active" });
   seasonId = s.id;
   await setSeasonPlayers(seasonId, ids);
+});
+
+describe("golfer logins", () => {
+  const addUser = async (id: string, email: string) => {
+    await db.insert(user).values({ id, name: id, email });
+  };
+
+  it("links a new login to the golfer with that email", async () => {
+    const g = await createGolfer({ name: "Linky", email: "Linky@Example.com" });
+    await addUser("u-linky", "linky@example.com");
+    expect(await linkGolferForUser("u-linky", "linky@example.com")).toBe(g.id);
+    expect(await linkGolferForUser("u-other", "nobody@example.com")).toBeNull();
+  });
+
+  it("moves an existing login to the golfer's new email", async () => {
+    const g = await createGolfer({ name: "Mover", email: "mover@test.local" });
+    await addUser("u-mover", "mover@test.local");
+    await linkGolferForUser("u-mover", "mover@test.local");
+    const updated = await updateGolfer(g.id, { email: "mover@real.com" });
+    expect(updated.userId).toBe("u-mover");
+    const [u] = await db.select().from(user).where(eq(user.id, "u-mover"));
+    expect(u.email).toBe("mover@real.com");
+  });
+
+  it("attaches the login they already made with the new email", async () => {
+    const g = await createGolfer({ name: "Dup", email: "dup@test.local" });
+    await addUser("u-dup-old", "dup@test.local");
+    await linkGolferForUser("u-dup-old", "dup@test.local");
+    await addUser("u-dup-new", "dup@real.com"); // signed in with real email before the admin fixed it
+    const updated = await updateGolfer(g.id, { email: "dup@real.com" });
+    expect(updated.userId).toBe("u-dup-new");
+    expect(await linkGolferForUser("u-dup-new", "dup@real.com")).toBe(g.id);
+  });
+
+  it("repairs a stale link at sign-in when the email was changed in the old code path", async () => {
+    const g = await createGolfer({ name: "Stale", email: "stale@test.local" });
+    await addUser("u-stale-old", "stale@test.local");
+    await linkGolferForUser("u-stale-old", "stale@test.local");
+    // Simulate the earlier bug: golfer email changed without moving the login.
+    await db.update(golfers).set({ email: "stale@real.com" }).where(eq(golfers.id, g.id));
+    await addUser("u-stale-new", "stale@real.com");
+    expect(await linkGolferForUser("u-stale-new", "stale@real.com")).toBe(g.id);
+    // The old test login no longer maps to the golfer.
+    expect(await linkGolferForUser("u-stale-old", "stale@test.local")).toBeNull();
+  });
 });
 
 describe("league flow", () => {

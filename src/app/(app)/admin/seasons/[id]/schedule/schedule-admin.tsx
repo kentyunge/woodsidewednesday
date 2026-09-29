@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { api } from "@/lib/api-client";
-import { useAction } from "../seasons-admin";
+import { useAction } from "../../../use-action";
 
 interface WeekRow {
   id: number;
@@ -249,7 +249,7 @@ export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks }
                 Generate
               </Button>
               {playerCount < 2 && (
-                <Link href={`/admin?season=${season.id}`} className="text-sm underline">
+                <Link href={`/admin/seasons/${season.id}/players`} className="text-sm underline">
                   Add players first
                 </Link>
               )}

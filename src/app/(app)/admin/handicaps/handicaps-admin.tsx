@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api-client";
 import { fmt } from "@/lib/utils";
-import { useAction } from "../seasons-admin";
+import { useAction } from "../use-action";
 
 interface Props {
   golfers: { id: number; name: string; handicap: number | null; method: string; basis: number[] }[];

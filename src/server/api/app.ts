@@ -176,6 +176,23 @@ api.openapi(
 
 api.openapi(
   route({
+    method: "delete",
+    path: "/seasons/{id}",
+    tags: ["Seasons"],
+    summary: "Delete a season",
+    description: "Removes the season's players, schedule and scores. Golfers and carried-over rounds are kept.",
+    request: { params: SeasonIdParam },
+    responses: json(S.OkSchema),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    await admin.deleteSeason(c.req.valid("param").id);
+    return c.json({ ok: true as const }, 200);
+  },
+);
+
+api.openapi(
+  route({
     method: "get",
     path: "/seasons/{id}",
     tags: ["Seasons"],

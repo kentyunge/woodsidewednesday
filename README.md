@@ -66,9 +66,12 @@ Open http://localhost:3000, choose **Email link**, enter your admin email, and c
 
 1. **Admin → Golfers**: add the 12 golfers with the emails they'll sign in with.
 2. **Admin → Handicaps**: paste last season's rounds from the Google Sheet (`name, YYYY-MM-DD, gross`).
-3. **Admin → Seasons**: create the season (status *Active*), tick the 12 players, save.
-4. **Admin → Schedule**: pick the first Wednesday and click **Generate**.
-5. After week 11: **Schedule → Week 12 → Pair from standings**.
+3. **Admin → Seasons → New season**: name it, set the first week, and set status to *Active*.
+4. In the season's **Players** tab, tick the 12 players and save.
+5. In the season's **Schedule** tab, pick the first Wednesday and click **Generate**.
+6. After week 11: **Schedule → Week 12 → Pair from standings**.
+
+A season you no longer need can be removed from its **Details** tab. Its schedule and scores are deleted, but golfers and carried-over rounds are kept.
 
 ## API
 

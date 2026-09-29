@@ -27,7 +27,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
           <SeasonPicker seasons={seasons} value={season.id} />
           {actor.isAdmin && (
             <Button variant="outline" asChild>
-              <Link href={`/admin/schedule?season=${season.id}`}>Manage</Link>
+              <Link href={`/admin/seasons/${season.id}/schedule`}>Manage</Link>
             </Button>
           )}
         </div>

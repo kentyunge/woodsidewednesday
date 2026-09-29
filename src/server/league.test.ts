@@ -12,12 +12,14 @@ import {
   deleteSeason,
   generatePositionNight,
   generateSchedule,
+  importHistoricalCsv,
   listSeasonSummaries,
   postponeWeek,
   setSeasonPlayers,
   updateGolfer,
 } from "./admin";
 import { ensureDefaultCourse } from "./bootstrap";
+import { golferRounds, listSubs } from "./golfers";
 import { loadSeason } from "./league";
 import { editAccess, saveEntry } from "./scores";
 
@@ -183,6 +185,49 @@ describe("league flow", () => {
     await expect(saveEntry(admin, m.id, "A", { status: "played", scores: [4, 4] })).rejects.toThrow(/9 hole scores/);
     await expect(saveEntry(admin, m.id, "A", { status: "ghost" })).rejects.toThrow(/other complete card/);
     expect((await db.select().from(matchEntries)).length).toBeGreaterThan(0);
+  });
+});
+
+describe("subs", () => {
+  it("adds a sub with previous scores that establish a handicap", async () => {
+    const g = await createGolfer({ name: "Sub Established" }, [
+      { playedOn: "2025-07-01", gross: 46 },
+      { playedOn: "2025-07-08", gross: 44 },
+      { playedOn: "2025-07-15", gross: 45 },
+    ]);
+    const view = await golferRounds(g.id);
+    expect(view.isRegular).toBe(false);
+    expect(view.rounds.map((r) => r.gross)).toEqual([45, 44, 46]); // newest first
+    expect(view.roundsNeeded).toBe(0);
+    expect(view.handicap).toMatchObject({ method: "rolling", handicap: 8 }); // avg +9 * .9 = 8.1
+  });
+
+  it("keeps a sub provisional until they have enough rounds", async () => {
+    const g = await createGolfer({ name: "Sub New" }, [{ playedOn: "2025-07-01", gross: 50 }]);
+    const view = await golferRounds(g.id);
+    expect(view.handicap.method).toBe("pending");
+    expect(view.roundsNeeded).toBe(2);
+  });
+
+  it("rejects bad previous scores without creating the sub", async () => {
+    const before = (await db.select().from(golfers)).length;
+    await expect(createGolfer({ name: "Sub Future" }, [{ playedOn: "2999-01-01", gross: 40 }])).rejects.toThrow(/future/);
+    await expect(createGolfer({ name: "Sub Low" }, [{ playedOn: "2025-07-01", gross: 4 }])).rejects.toThrow(/9-hole/);
+    expect((await db.select().from(golfers)).length).toBe(before);
+  });
+
+  it("lists everyone who isn't a regular in the current season", async () => {
+    const subs = await listSubs();
+    const names = subs.map((s) => s.golfer.name);
+    expect(names).toContain("Sub Established");
+    expect(names).toContain("Sub S"); // subbed in during the league flow
+    expect(subs.some((s) => ids.includes(s.golfer.id))).toBe(false);
+  });
+
+  it("skips out-of-range rows when importing", async () => {
+    const r = await importHistoricalCsv("Sub Established, 2025-06-01, 43\nSub Established, 2999-06-01, 43\nSub Established, 2025-06-02, 150");
+    expect(r.imported).toBe(1);
+    expect(r.errors).toHaveLength(2);
   });
 });
 

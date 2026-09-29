@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,9 @@ function GolferRow({ g }: { g: G }) {
       <Input value={phone} type="tel" placeholder="phone" onChange={(e) => setPhone(e.target.value)} aria-label="Phone" />
       <div className="flex items-center gap-2">
         {g.linked ? <Badge variant="secondary">Signed in</Badge> : <Badge variant="outline">No login yet</Badge>}
+        <Button size="sm" variant="outline" asChild>
+          <Link href={`/admin/golfers/${g.id}`}>Rounds</Link>
+        </Button>
         {dirty && (
           <Button
             size="sm"

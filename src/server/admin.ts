@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { golfers, historicalRounds, matchEntries, matches, seasonPlayers, seasons, user, weeks } from "@/db/schema";
-import { addDays } from "@/lib/dates";
+import { addDays, today } from "@/lib/dates";
 import { positionNight, roundRobin, shuffle } from "@/lib/scoring";
 import { ensureDefaultCourse } from "./bootstrap";
 import { badRequest, conflict, notFound } from "./errors";
@@ -22,12 +22,23 @@ export async function listGolfers() {
   return db.select().from(golfers).orderBy(asc(golfers.name));
 }
 
-export async function createGolfer(input: GolferInput) {
-  const [g] = await db
-    .insert(golfers)
-    .values({ name: input.name.trim(), email: normEmail(input.email), phone: input.phone ?? null, active: input.active ?? true })
-    .returning();
-  return g;
+export async function createGolfer(input: GolferInput, previousRounds: { playedOn: string; gross: number }[] = []) {
+  for (const r of previousRounds) {
+    const error = previousRoundError(r);
+    if (error) throw badRequest(error);
+  }
+  return db.transaction(async (tx) => {
+    const [g] = await tx
+      .insert(golfers)
+      .values({ name: input.name.trim(), email: normEmail(input.email), phone: input.phone ?? null, active: input.active ?? true })
+      .returning();
+    if (previousRounds.length) {
+      await tx
+        .insert(historicalRounds)
+        .values(previousRounds.map((r) => ({ golferId: g.id, playedOn: r.playedOn, gross: r.gross, note: "Previous score" })));
+    }
+    return g;
+  });
 }
 
 export async function updateGolfer(id: number, input: Partial<GolferInput>) {
@@ -75,8 +86,19 @@ export async function listHistoricalRounds(golferId?: number) {
   return (golferId ? q.where(eq(historicalRounds.golferId, golferId)) : q).orderBy(asc(historicalRounds.playedOn));
 }
 
+/** Why a previous round can't be recorded, or null if it's fine. */
+function previousRoundError(r: { playedOn: string; gross: number }): string | null {
+  if (r.playedOn > today()) return `${r.playedOn} is in the future`;
+  if (!Number.isInteger(r.gross) || r.gross < 9 || r.gross > 99) return `${r.gross} isn't a 9-hole score`;
+  return null;
+}
+
 export async function addHistoricalRounds(rows: { golferId: number; playedOn: string; gross: number; par?: number; note?: string | null }[]) {
   if (!rows.length) return [];
+  for (const r of rows) {
+    const error = previousRoundError(r);
+    if (error) throw badRequest(error);
+  }
   return db
     .insert(historicalRounds)
     .values(rows.map((r) => ({ ...r, par: r.par ?? 36, note: r.note ?? null })))
@@ -104,6 +126,11 @@ export async function importHistoricalCsv(csv: string) {
     if (i === 0 && isNaN(Number(gross))) continue; // header row
     if (!who || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? "") || !Number.isInteger(Number(gross))) {
       errors.push(`Line ${i + 1}: expected "name, YYYY-MM-DD, gross" but got "${line}"`);
+      continue;
+    }
+    const rangeError = previousRoundError({ playedOn: date, gross: Number(gross) });
+    if (rangeError) {
+      errors.push(`Line ${i + 1}: ${rangeError}`);
       continue;
     }
     let g = find(who);

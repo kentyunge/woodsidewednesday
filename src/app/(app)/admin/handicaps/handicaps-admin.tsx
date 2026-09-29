@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +45,11 @@ export function HandicapsAdmin({ golfers, rounds }: Props) {
             <TableBody>
               {golfers.map((g) => (
                 <TableRow key={g.id}>
-                  <TableCell>{g.name}</TableCell>
+                  <TableCell>
+                    <Link href={`/admin/golfers/${g.id}`} className="hover:underline">
+                      {g.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
                     {g.method === "rolling" ? fmt(g.handicap) : <span className="text-muted-foreground text-xs font-normal">provisional</span>}
                   </TableCell>

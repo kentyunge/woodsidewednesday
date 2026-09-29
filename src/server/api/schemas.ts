@@ -27,9 +27,55 @@ export const GolferInput = z
   })
   .openapi("GolferInput");
 
+export const NewGolferInput = GolferInput.extend({
+  previousRounds: z
+    .array(z.object({ playedOn: DateStr, gross: z.number().int() }))
+    .optional()
+    .openapi({ description: "Earlier 9-hole gross scores (par 36) that count toward their handicap" }),
+}).openapi("NewGolferInput");
+
 export const HistoricalRound = z
   .object({ id: z.number(), golferId: z.number(), playedOn: z.string(), gross: z.number(), par: z.number(), note: z.string().nullable() })
   .openapi("HistoricalRound");
+
+const HandicapResult = z.object({
+  handicap: z.number().nullable(),
+  raw: z.number().nullable(),
+  method: z.enum(["rolling", "provisional", "pending"]),
+  basis: z.array(z.number()),
+});
+
+export const GolferRounds = z
+  .object({
+    golfer: Golfer,
+    isRegular: z.boolean().openapi({ description: "A regular in the current season; otherwise a sub" }),
+    handicap: HandicapResult,
+    roundsNeeded: z.number().openapi({ description: "Rounds still needed to establish a handicap" }),
+    rounds: z.array(
+      z.object({
+        date: z.string(),
+        gross: z.number(),
+        diff: z.number().openapi({ description: "Strokes over par" }),
+        source: z.enum(["match", "historical"]),
+        seasonName: z.string().nullable(),
+        weekNumber: z.number().nullable(),
+        matchId: z.number().optional(),
+        historicalId: z.number().optional(),
+        note: z.string().nullable().optional(),
+      }),
+    ),
+  })
+  .openapi("GolferRounds");
+
+export const SubRow = z
+  .object({
+    golfer: Golfer,
+    rounds: z.number(),
+    lastPlayed: z.string().nullable(),
+    handicap: HandicapResult,
+    roundsNeeded: z.number(),
+  })
+  .openapi("Sub");
 
 export const Hole = z.object({ number: z.number(), par: z.number(), handicap: z.number() }).openapi("Hole");
 

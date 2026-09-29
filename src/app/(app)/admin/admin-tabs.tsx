@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { href: "/admin", label: "Seasons", match: (p: string) => p === "/admin" || p.startsWith("/admin/seasons") },
   { href: "/admin/golfers", label: "Golfers", match: (p: string) => p.startsWith("/admin/golfers") },
+  { href: "/admin/subs", label: "Subs", match: (p: string) => p.startsWith("/admin/subs") },
   { href: "/admin/handicaps", label: "Handicaps", match: (p: string) => p.startsWith("/admin/handicaps") },
 ];
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
+import { SetPasswordButton } from "../set-password";
 import { useAction } from "../use-action";
 
 interface G {
@@ -29,11 +30,12 @@ function GolferRow({ g }: { g: G }) {
       <Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Name" />
       <Input value={email} type="email" placeholder="email (for sign-in)" onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
       <Input value={phone} type="tel" placeholder="phone" onChange={(e) => setPhone(e.target.value)} aria-label="Phone" />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {g.linked ? <Badge variant="secondary">Signed in</Badge> : <Badge variant="outline">No login yet</Badge>}
         <Button size="sm" variant="outline" asChild>
           <Link href={`/admin/golfers/${g.id}`}>Rounds</Link>
         </Button>
+        <SetPasswordButton golfer={{ id: g.id, name: g.name, email: g.email }} />
         {dirty && (
           <Button
             size="sm"

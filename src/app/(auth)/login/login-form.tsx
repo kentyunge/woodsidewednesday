@@ -11,21 +11,54 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth/client";
 
-export function LoginForm() {
+/** Friendly text for errors Better Auth puts on the URL (e.g. an old-style link that was already used). */
+function errorMessage(code: string): string {
+  if (code === "INVALID_TOKEN" || code === "EXPIRED_TOKEN") {
+    return "That sign-in link has expired or was already used. Send yourself a new one below.";
+  }
+  return "Sign-in didn't work. Please try again.";
+}
+
+export function LoginForm({ error }: { error: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function sendLink(e: React.FormEvent) {
+  function signedIn() {
+    router.push("/");
+    router.refresh();
+  }
+
+  async function sendEmail(e: { preventDefault(): void }) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/" });
+    const { error } = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/", errorCallbackURL: "/login" });
     setBusy(false);
-    if (error) toast.error(error.message ?? "Could not send link");
-    else setSent(true);
+    if (error) toast.error(error.message ?? "Could not send the email");
+    else {
+      setCode("");
+      setSent(true);
+    }
+  }
+
+  async function signInCode(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const { error } = await authClient.signIn.emailOtp({ email: email.trim(), otp: code.trim() });
+    setBusy(false);
+    if (error) {
+      toast.error(
+        error.code === "TOO_MANY_ATTEMPTS"
+          ? "Too many tries. Send yourself a new code."
+          : "That code didn't work. Check it, or send yourself a new one.",
+      );
+      return;
+    }
+    signedIn();
   }
 
   async function signInPassword(e: React.FormEvent) {
@@ -40,35 +73,64 @@ export function LoginForm() {
       toast.error(error.message ?? "Sign in failed");
       return;
     }
-    router.push("/");
-    router.refresh();
+    signedIn();
   }
 
   return (
     <Card>
-      <CardContent>
-        <Tabs defaultValue="link">
+      <CardContent className="space-y-4">
+        {error && !sent && (
+          <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            {errorMessage(error)}
+          </p>
+        )}
+        <Tabs defaultValue="email">
           <TabsList className="w-full">
-            <TabsTrigger value="link">
-              <Mail /> Email link
+            <TabsTrigger value="email">
+              <Mail /> Email
             </TabsTrigger>
             <TabsTrigger value="password">
               <KeyRound /> Password
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="link" className="pt-4">
+          <TabsContent value="email" className="pt-4">
             {sent ? (
-              <div className="space-y-2 text-center text-sm">
-                <p className="font-medium">Check your email</p>
-                <p className="text-muted-foreground">
-                  If <span className="font-medium">{email}</span> is in the league, a sign-in link is on its way.
-                </p>
-                <Button variant="link" onClick={() => setSent(false)}>
-                  Use a different email
+              <form onSubmit={signInCode} className="space-y-4">
+                <div className="space-y-1 text-center text-sm">
+                  <p className="font-medium">Check your email</p>
+                  <p className="text-muted-foreground">
+                    If <span className="font-medium">{email}</span> is in the league, a sign-in link and code are on their way.
+                    Tap the link, or enter the code here.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="code">6-digit code</Label>
+                  <Input
+                    id="code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    required
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                    className="text-center text-2xl font-semibold tracking-[0.4em] tabular-nums"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
+                  {busy ? "Signing in…" : "Sign in"}
                 </Button>
-              </div>
+                <div className="flex justify-center gap-4 text-sm">
+                  <Button type="button" variant="link" className="h-auto p-0" onClick={sendEmail} disabled={busy}>
+                    Send a new email
+                  </Button>
+                  <Button type="button" variant="link" className="h-auto p-0" onClick={() => setSent(false)}>
+                    Use a different email
+                  </Button>
+                </div>
+              </form>
             ) : (
-              <form onSubmit={sendLink} className="space-y-4">
+              <form onSubmit={sendEmail} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -108,7 +170,7 @@ export function LoginForm() {
                 {busy ? "Signing in…" : "Sign in"}
               </Button>
               <p className="text-muted-foreground text-center text-xs">
-                First time? Use an email link, then set a username and password on your profile.
+                No password yet? Sign in by email, then set one on your profile, or ask the league admin.
               </p>
             </form>
           </TabsContent>

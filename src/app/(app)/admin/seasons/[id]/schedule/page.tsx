@@ -1,3 +1,4 @@
+import { fmt } from "@/lib/utils";
 import { loadSeason } from "@/server/league";
 import { listRecaps, recapRecipients } from "@/server/recap";
 import { ScheduleAdmin } from "./schedule-admin";
@@ -42,6 +43,11 @@ export default async function SeasonScheduleAdminPage({ params }: PageProps<"/ad
           a: m.a.owner.id,
           b: m.b?.owner.id ?? null,
           hasScores: !!(m.a.entryId || m.b?.entryId),
+          summary: !m.b
+            ? `${m.a.owner.name}: bye`
+            : m.complete
+              ? `${m.a.owner.name} ${fmt(m.a.pointsAwarded)} – ${fmt(m.b.pointsAwarded)} ${m.b.owner.name}`
+              : `${m.a.owner.name} vs ${m.b.owner.name} (no result yet)`,
         })),
       }))}
     />

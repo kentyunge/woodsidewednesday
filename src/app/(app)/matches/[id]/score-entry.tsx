@@ -45,7 +45,7 @@ interface Props {
   par: number;
   provisionalPercent: number;
   isAdmin: boolean;
-  subOptions: { id: number; name: string; regular: boolean }[];
+  subOptions: { id: number; name: string; isSub: boolean }[];
   ghostOptions: { id: number; name: string }[];
   lockDate: string;
 }
@@ -171,12 +171,20 @@ export function ScoreEntry({ match, holes, par, provisionalPercent, isAdmin, sub
                     <NativeSelect value={s.playerId} onChange={(e) => update(i, { playerId: e.target.value })}>
                       <option value="">Choose a golfer…</option>
                       <option value="new">+ New sub</option>
-                      {subOptions.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                          {g.regular ? " (regular)" : ""}
-                        </option>
-                      ))}
+                      {[
+                        { label: "Subs", list: subOptions.filter((g) => g.isSub) },
+                        { label: "Regulars", list: subOptions.filter((g) => !g.isSub) },
+                      ]
+                        .filter((group) => group.list.length > 0)
+                        .map((group) => (
+                          <optgroup key={group.label} label={group.label}>
+                            {group.list.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
                     </NativeSelect>
                     {s.playerId === "new" && (
                       <Input placeholder="Sub's name" value={s.newSubName} onChange={(e) => update(i, { newSubName: e.target.value })} />

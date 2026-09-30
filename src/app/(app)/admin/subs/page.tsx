@@ -17,7 +17,7 @@ export default async function SubsAdminPage() {
       <CardHeader>
         <CardTitle>Subs</CardTitle>
         <CardDescription>
-          Golfers who aren&apos;t regulars{season ? ` in ${season.name}` : ""}. Until a sub has {rules.establishRounds} rounds on record,
+          Golfers flagged as subs; move someone between regulars and subs from their page. Until a sub has {rules.establishRounds} rounds on record,
           their handicap is {Math.round(rules.provisionalPercent * 100)}% of that night&apos;s round; after that it&apos;s{" "}
           {Math.round(rules.handicapPercent * 100)}% of their last {rules.rollingRounds}. Add previous scores to establish a handicap
           before they play.

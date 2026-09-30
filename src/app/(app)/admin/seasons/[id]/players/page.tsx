@@ -16,7 +16,7 @@ export default async function SeasonPlayersPage({ params }: PageProps<"/admin/se
     <SeasonPlayers
       seasonId={id}
       playerIds={current.map((p) => p.golferId)}
-      golfers={golfers.map((g) => ({ id: g.id, name: g.name, active: g.active }))}
+      golfers={golfers.map((g) => ({ id: g.id, name: g.name, active: g.active, isSub: g.isSub }))}
     />
   );
 }

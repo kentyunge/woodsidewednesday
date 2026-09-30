@@ -15,6 +15,7 @@ export const Golfer = z
     phone: z.string().nullable(),
     userId: z.string().nullable(),
     active: z.boolean(),
+    isSub: z.boolean().openapi({ description: "Fills in for regulars; grouped separately from them" }),
   })
   .openapi("Golfer");
 
@@ -24,6 +25,7 @@ export const GolferInput = z
     email: z.email().nullish(),
     phone: z.string().nullish(),
     active: z.boolean().optional(),
+    isSub: z.boolean().optional(),
   })
   .openapi("GolferInput");
 

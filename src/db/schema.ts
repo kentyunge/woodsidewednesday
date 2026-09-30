@@ -54,6 +54,8 @@ export const golfers = pgTable("golfers", {
     .unique()
     .references(() => user.id, { onDelete: "set null" }),
   active: boolean("active").notNull().default(true),
+  /** Fills in for regulars rather than holding a roster spot; grouped separately in admin. */
+  isSub: boolean("is_sub").notNull().default(false),
   ...timestamps,
 });
 

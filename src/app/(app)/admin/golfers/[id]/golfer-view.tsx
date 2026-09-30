@@ -9,7 +9,7 @@ import { fmt } from "@/lib/utils";
 import { HttpError } from "@/server/errors";
 import { golferRounds } from "@/server/golfers";
 import { HandicapStatus } from "../../handicap-status";
-import { AddPreviousScores, DeleteRound, GolferContact } from "./golfer-admin";
+import { AddPreviousScores, DeleteRound, GolferContact, SubToggle } from "./golfer-admin";
 
 /** Admin view of one golfer: handicap, contact, previous scores. Shared by /admin/golfers/[id] and /admin/subs/[id]. */
 export async function GolferAdminView({ id, back }: { id: number; back: "golfers" | "subs" }) {
@@ -17,7 +17,7 @@ export async function GolferAdminView({ id, back }: { id: number; back: "golfers
     if (e instanceof HttpError && e.status === 404) notFound();
     throw e;
   });
-  const { golfer, isRegular, handicap, roundsNeeded, rules, rounds } = view;
+  const { golfer, handicap, roundsNeeded, rules, rounds } = view;
   const basisCount = handicap.basis.length;
 
   return (
@@ -26,11 +26,14 @@ export async function GolferAdminView({ id, back }: { id: number; back: "golfers
         <Link href={`/admin/${back}`} className="text-muted-foreground inline-flex items-center gap-1 text-sm hover:underline">
           <ArrowLeft className="size-4" /> {back === "subs" ? "Subs" : "Golfers"}
         </Link>
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          {golfer.name}
-          <Badge variant="secondary">{isRegular ? "Regular" : "Sub"}</Badge>
-          {!golfer.active && <Badge variant="outline">Archived</Badge>}
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            {golfer.name}
+            <Badge variant="secondary">{golfer.isSub ? "Sub" : "Regular"}</Badge>
+            {!golfer.active && <Badge variant="outline">Archived</Badge>}
+          </h2>
+          <SubToggle golfer={{ id: golfer.id, name: golfer.name, isSub: golfer.isSub }} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

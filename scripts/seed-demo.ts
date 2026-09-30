@@ -42,7 +42,7 @@ async function main() {
   for (const [i, name] of NAMES.entries()) {
     golfers.push(await createGolfer({ name, email: `golfer${i + 1}@example.com` }));
   }
-  const sub = await createGolfer({ name: "Sam Rivers (sub)" });
+  const sub = await createGolfer({ name: "Sam Rivers (sub)", isSub: true });
 
   // Last season: five rounds each so handicaps are established from week 1.
   const t = today();

@@ -10,13 +10,35 @@ import { useAction } from "../../../use-action";
 interface Props {
   seasonId: number;
   playerIds: number[];
-  golfers: { id: number; name: string; active: boolean }[];
+  golfers: { id: number; name: string; active: boolean; isSub: boolean }[];
 }
 
 export function SeasonPlayers({ seasonId, playerIds, golfers }: Props) {
   const { busy, run } = useAction();
   const [players, setPlayers] = useState<Set<number>>(new Set(playerIds));
   const dirty = players.size !== playerIds.length || playerIds.some((id) => !players.has(id));
+  const shown = golfers.filter((g) => g.active || players.has(g.id));
+  const subs = shown.filter((g) => g.isSub);
+  const checkboxes = (list: typeof golfers) => (
+    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map((g) => (
+        <label key={g.id} className="hover:bg-muted flex items-center gap-2 rounded px-2 py-1.5 text-sm">
+          <input
+            type="checkbox"
+            className="accent-primary size-4"
+            checked={players.has(g.id)}
+            onChange={(e) => {
+              const next = new Set(players);
+              if (e.target.checked) next.add(g.id);
+              else next.delete(g.id);
+              setPlayers(next);
+            }}
+          />
+          {g.name}
+        </label>
+      ))}
+    </div>
+  );
 
   return (
     <Card>
@@ -31,26 +53,13 @@ export function SeasonPlayers({ seasonId, playerIds, golfers }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
-          {golfers
-            .filter((g) => g.active || players.has(g.id))
-            .map((g) => (
-              <label key={g.id} className="hover:bg-muted flex items-center gap-2 rounded px-2 py-1.5 text-sm">
-                <input
-                  type="checkbox"
-                  className="accent-primary size-4"
-                  checked={players.has(g.id)}
-                  onChange={(e) => {
-                    const next = new Set(players);
-                    if (e.target.checked) next.add(g.id);
-                    else next.delete(g.id);
-                    setPlayers(next);
-                  }}
-                />
-                {g.name}
-              </label>
-            ))}
-        </div>
+        {checkboxes(shown.filter((g) => !g.isSub))}
+        {subs.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-muted-foreground px-2 text-xs font-semibold tracking-wide uppercase">Subs</p>
+            {checkboxes(subs)}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button
             disabled={busy || !dirty}

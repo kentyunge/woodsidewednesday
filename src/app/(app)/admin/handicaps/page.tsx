@@ -14,7 +14,7 @@ export default async function HandicapsAdminPage({ searchParams }: PageProps<"/a
         .filter((g) => g.active)
         .map((g) => {
           const h = data ? upcomingHandicap(data, g.id) : null;
-          return { id: g.id, name: g.name, handicap: h?.handicap ?? null, method: h?.method ?? "pending", basis: h?.basis ?? [] };
+          return { id: g.id, name: g.name, isSub: g.isSub, handicap: h?.handicap ?? null, method: h?.method ?? "pending", basis: h?.basis ?? [] };
         })}
       rounds={rounds.map((r) => ({ id: r.id, golferId: r.golferId, playedOn: r.playedOn, gross: r.gross, note: r.note }))}
     />

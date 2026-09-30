@@ -10,6 +10,7 @@ import { HttpError, notFound } from "../errors";
 import { getCurrentSeason, getSeasons, loadSeason } from "../league";
 import { clearEntry, editAccess, getMatch, saveEntry } from "../scores";
 import { golferRounds, listSubs } from "../golfers";
+import * as recap from "../recap";
 import { golferSeasonStats, leagueStats } from "../stats";
 import * as S from "./schemas";
 
@@ -351,7 +352,7 @@ const WeekInput = z.object({
   kind: z.enum(["regular", "position"]).optional(),
   notes: z.string().nullish(),
 });
-const WeekRow = S.Week.omit({ matches: true, lockDate: true, complete: true });
+const WeekRow = S.Week.omit({ matches: true, lockDate: true, complete: true, closed: true });
 
 api.openapi(
   route({
@@ -408,6 +409,100 @@ api.openapi(
     requireAdmin(c.get("actor"));
     const { reason, days } = c.req.valid("json");
     return c.json(await admin.postponeWeek(c.req.valid("param").id, reason, days), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "post",
+    path: "/weeks/{id}/complete",
+    tags: ["Schedule", "Recaps"],
+    summary: "Mark a week complete and (by default) email the AI-written recap",
+    description:
+      "Locks golfer score entry for the week. The recap goes to the admins unless RECAP_SEND_TO=league. If the recap fails, the week still closes and recapError explains why.",
+    request: { params: S.IdParam, ...body(z.object({ sendRecap: z.boolean().default(true) })) },
+    responses: json(z.object({ weekId: z.number(), closed: z.boolean(), recap: S.Recap.nullable(), recapError: z.string().nullable() })),
+  }),
+  async (c) => {
+    const actor = requireAdmin(c.get("actor"));
+    const r = await recap.completeWeek(actor, c.req.valid("param").id, { sendRecap: c.req.valid("json").sendRecap });
+    return c.json({ weekId: r.week.id, closed: true, recap: r.recap, recapError: r.recapError }, 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "post",
+    path: "/weeks/{id}/reopen",
+    tags: ["Schedule"],
+    summary: "Reopen a completed week so golfers can edit scores again",
+    request: { params: S.IdParam },
+    responses: json(S.OkSchema),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    await recap.reopenWeek(c.req.valid("param").id);
+    return c.json({ ok: true as const }, 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "post",
+    path: "/weeks/{id}/recap",
+    tags: ["Recaps"],
+    summary: "Write a new recap for a week; send it, or keep it as a preview",
+    request: { params: S.IdParam, ...body(z.object({ send: z.boolean().default(false) })) },
+    responses: json(S.Recap),
+  }),
+  async (c) => {
+    const actor = requireAdmin(c.get("actor"));
+    return c.json(await recap.createRecap(actor, c.req.valid("param").id, { send: c.req.valid("json").send }), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "get",
+    path: "/recaps/{id}",
+    tags: ["Recaps"],
+    summary: "A recap's subject, HTML and text",
+    request: { params: S.IdParam },
+    responses: json(S.Recap.extend({ html: z.string(), text: z.string() })),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    return c.json(await recap.getRecap(c.req.valid("param").id), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "get",
+    path: "/recap-settings",
+    tags: ["Recaps"],
+    summary: "Recap tone instructions and who recaps go to",
+    responses: json(z.object({ tone: z.string(), isDefault: z.boolean(), sendTo: z.enum(["admins", "league"]) })),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    const { tone, isDefault } = await recap.getRecapTone();
+    return c.json({ tone, isDefault, sendTo: process.env.RECAP_SEND_TO === "league" ? ("league" as const) : ("admins" as const) }, 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "put",
+    path: "/recap-settings",
+    tags: ["Recaps"],
+    summary: "Change the recap tone instructions (empty restores the default)",
+    request: body(z.object({ tone: z.string().max(4000) })),
+    responses: json(z.object({ tone: z.string(), isDefault: z.boolean() })),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    return c.json(await recap.setRecapTone(c.req.valid("json").tone), 200);
   },
 );
 

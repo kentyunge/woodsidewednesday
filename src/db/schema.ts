@@ -106,6 +106,8 @@ export const weeks = pgTable(
       .default("regular"),
     /** Times this week has been pushed back (rainouts). */
     postponements: integer("postponements").notNull().default(0),
+    /** Set when the admin marks the week complete; golfers can no longer edit its scores. */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     notes: text("notes"),
     ...timestamps,
   },
@@ -164,5 +166,28 @@ export const historicalRounds = pgTable("historical_rounds", {
   gross: integer("gross").notNull(),
   par: integer("par").notNull().default(36),
   note: text("note"),
+  ...timestamps,
+});
+
+/** Simple key/value settings editable by the admin (e.g. recap tone). */
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  ...timestamps,
+});
+
+/** AI-written weekly recap emails, kept so the admin can review and tune the tone. */
+export const weekRecaps = pgTable("week_recaps", {
+  id: serial("id").primaryKey(),
+  weekId: integer("week_id")
+    .notNull()
+    .references(() => weeks.id, { onDelete: "cascade" }),
+  subject: text("subject").notNull(),
+  html: text("html").notNull(),
+  text: text("text").notNull(),
+  model: text("model").notNull(),
+  /** Addresses it was emailed to; empty for a preview. */
+  sentTo: jsonb("sent_to").$type<string[]>().notNull().default([]),
+  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   ...timestamps,
 });

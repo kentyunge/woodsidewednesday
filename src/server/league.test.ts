@@ -21,6 +21,9 @@ import {
 import { ensureDefaultCourse } from "./bootstrap";
 import { golferRounds, listSubs } from "./golfers";
 import { loadSeason } from "./league";
+import { buildRecapFacts } from "./recap/facts";
+import { renderRecapEmail } from "./recap/email";
+import { completeWeek, reopenWeek } from "./recap";
 import { editAccess, saveEntry } from "./scores";
 
 const admin: Actor = { userId: "admin-user", name: "Admin", email: "a@x", username: null, isAdmin: true, golferId: null };
@@ -145,6 +148,81 @@ describe("league flow", () => {
     const cRow = data.standings.find((s) => s.golfer.id === ids[2])!;
     expect(cRow.points).toBe(sub.pointsAwarded);
     expect(data.history.get(sub.player!.id)).toHaveLength(1);
+  });
+
+  it("builds recap facts judged against each golfer's own game", async () => {
+    const data = await loadSeason(seasonId);
+    const week = data.weeks.find((w) => w.number === scoredWeek)!;
+    const facts = buildRecapFacts(data, week.id);
+    const names = facts.golfers.map((g) => g.name).sort();
+    expect(names).toEqual(["A", "B", "Sub S"]); // the ghost side played no round
+
+    // A: handicap 9 gets a stroke on every hole, so bogey is "expected"; card(12) adds one more on holes 1-3.
+    const a = facts.golfers.find((g) => g.name === "A")!;
+    expect(a.handicap).toBe(9);
+    expect(a.holes.every((h) => h.expected === h.par + 1)).toBe(true);
+    expect(a.holes.slice(0, 3).map((h) => h.vsExpected)).toEqual([1, 1, 1]);
+    expect(a.holes.slice(3).every((h) => h.vsExpected === 0)).toBe(true);
+    expect(a.typicalGross).toBe(46); // five carried-over rounds at +10
+    expect(a.vsTypical).toBe(2);
+    expect(a.lowlights).toHaveLength(0); // nothing worse than their usual
+
+    // B: handicap 5 gets strokes only on the five hardest holes (#8, #9, #3, #7, #4).
+    const b = facts.golfers.find((g) => g.name === "B")!;
+    const strokeHoles = b.holes.filter((h) => h.expected > h.par).map((h) => h.hole).sort((x, y) => x - y);
+    expect(strokeHoles).toEqual([3, 4, 7, 8, 9]);
+
+    const sub = facts.golfers.find((g) => g.name === "Sub S")!;
+    expect(sub.role).toBe("sub");
+    expect(sub.subFor).toBe("C");
+    expect(facts.matches.some((m) => /ghost/.test(`${m.aNote} ${m.bNote}`))).toBe(true);
+    expect(facts.standings).toHaveLength(4);
+    expect(facts.nextWeek?.week).toBe(scoredWeek + 1);
+  });
+
+  it("renders the recap email with escaped text, the standings table and next week's matchups", async () => {
+    const data = await loadSeason(seasonId);
+    const week = data.weeks.find((w) => w.number === scoredWeek)!;
+    const facts = buildRecapFacts(data, week.id);
+    const email = renderRecapEmail(
+      {
+        subject: "Carnage at Woodside",
+        preheader: "It got ugly",
+        sections: [{ heading: "The <wreckage>", paragraphs: ["**A** made a mess & then some"] }],
+        signoff: "See you Wednesday",
+      },
+      facts,
+      data.standings,
+      "https://example.com",
+    );
+    expect(email.html).toContain("The &lt;wreckage&gt;");
+    expect(email.html).toContain("<strong>A</strong> made a mess &amp; then some");
+    expect(email.html).toContain("Standings");
+    for (const r of data.standings) expect(email.html).toContain(`<td style="padding:6px 8px;border-bottom:1px solid #eef2ef">${r.golfer.name}</td>`);
+    for (const m of facts.nextWeek!.matchups) expect(email.html).toContain(m);
+    expect(email.text).toContain("STANDINGS");
+    expect(email.text).not.toContain("**");
+  });
+
+  it("closing a week locks golfers out, and a missing API key doesn't block closing", async () => {
+    const data = await loadSeason(seasonId);
+    const week = data.weeks.find((w) => w.number === scoredWeek)!;
+    const saved = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    const r = await completeWeek(admin, week.id, { sendRecap: true });
+    if (saved) process.env.ANTHROPIC_API_KEY = saved;
+    expect(r.week.closedAt).not.toBeNull();
+    expect(r.recap).toBeNull();
+    expect(r.recapError).toMatch(/ANTHROPIC_API_KEY/);
+
+    const closed = (await loadSeason(seasonId)).weeks.find((w) => w.id === week.id)!;
+    expect(closed.closed).toBe(true);
+    const golfer: Actor = { ...admin, isAdmin: false, golferId: closed.matches[0].a.owner.id };
+    expect(editAccess(golfer, closed.matches[0], { ...closed, lockDate: "2999-01-01" })).toMatchObject({ allowed: false });
+    expect(editAccess(admin, closed.matches[0], closed)).toMatchObject({ allowed: true });
+
+    await reopenWeek(week.id);
+    expect((await loadSeason(seasonId)).weeks.find((w) => w.id === week.id)!.closed).toBe(false);
   });
 
   it("locks golfer edits at the next week's date", async () => {

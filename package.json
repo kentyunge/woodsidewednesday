@@ -15,6 +15,7 @@
     "vercel-build": "tsx scripts/migrate.ts && next build"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "@electric-sql/pglite": "^0.5.8",
     "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^1.6.3",

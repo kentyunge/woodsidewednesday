@@ -175,7 +175,8 @@ export const Week = z
     postponements: z.number(),
     notes: z.string().nullable(),
     lockDate: z.string(),
-    complete: z.boolean(),
+    complete: z.boolean().openapi({ description: "Every match has a result" }),
+    closed: z.boolean().openapi({ description: "The admin marked the week complete" }),
     matches: z.array(Match),
   })
   .openapi("Week");
@@ -285,3 +286,13 @@ export const Me = z
     hasPassword: z.boolean(),
   })
   .openapi("Me");
+
+export const Recap = z
+  .object({
+    id: z.number(),
+    weekId: z.number(),
+    subject: z.string(),
+    model: z.string(),
+    sentTo: z.array(z.string()),
+  })
+  .openapi("Recap");

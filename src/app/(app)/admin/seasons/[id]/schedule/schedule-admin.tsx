@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { api } from "@/lib/api-client";
 import { useAction } from "../../../use-action";
+import { WeekCloseControls, type RecapSummary } from "./week-close";
 
 interface WeekRow {
   id: number;
@@ -21,6 +22,9 @@ interface WeekRow {
   notes: string | null;
   postponements: number;
   complete: boolean;
+  closed: boolean;
+  incomplete: number;
+  recaps: RecapSummary[];
   matches: { id: number; a: number; b: number | null; hasScores: boolean }[];
 }
 
@@ -30,6 +34,7 @@ interface Props {
   playerCount: number;
   hasScores: boolean;
   weeks: WeekRow[];
+  recipients: string;
 }
 
 function GolferSelect({ value, onChange, players, allowBye }: { value: number | null; onChange: (v: number | null) => void; players: Props["players"]; allowBye?: boolean }) {
@@ -78,7 +83,7 @@ function MatchEditor({ match, players }: { match: WeekRow["matches"][number]; pl
   );
 }
 
-function WeekCard({ week, players, seasonId }: { week: WeekRow; players: Props["players"]; seasonId: number }) {
+function WeekCard({ week, players, seasonId, recipients }: { week: WeekRow; players: Props["players"]; seasonId: number; recipients: string }) {
   const { busy, run } = useAction();
   const [date, setDate] = useState(week.date);
   const [notes, setNotes] = useState(week.notes ?? "");
@@ -118,6 +123,17 @@ function WeekCard({ week, players, seasonId }: { week: WeekRow; players: Props["
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
+        <WeekCloseControls
+          week={{
+            id: week.id,
+            number: week.number,
+            closed: week.closed,
+            incomplete: week.incomplete,
+            scored: week.matches.some((m) => m.hasScores),
+          }}
+          recaps={week.recaps}
+          recipients={recipients}
+        />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-[10rem_10rem_1fr]">
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
           <NativeSelect value={kind} onChange={(e) => setKind(e.target.value as WeekRow["kind"])} aria-label="Type">
@@ -208,7 +224,7 @@ function WeekCard({ week, players, seasonId }: { week: WeekRow; players: Props["
   );
 }
 
-export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks }: Props) {
+export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks, recipients }: Props) {
   const { busy, run } = useAction();
   const [start, setStart] = useState(season.startDate);
   const [positionNight, setPositionNight] = useState(true);
@@ -260,7 +276,7 @@ export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks }
 
       <div className="grid gap-4 xl:grid-cols-2">
         {weeks.map((w) => (
-          <WeekCard key={`${w.id}-${w.date}-${w.kind}-${w.notes}`} week={w} players={players} seasonId={season.id} />
+          <WeekCard key={`${w.id}-${w.date}-${w.kind}-${w.notes}`} week={w} players={players} seasonId={season.id} recipients={recipients} />
         ))}
       </div>
 

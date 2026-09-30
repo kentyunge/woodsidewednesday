@@ -60,6 +60,8 @@ Open http://localhost:3000, choose **Email link**, enter your admin email, and c
    - `ADMIN_EMAILS`: `kent.yunge@gmail.com`
    - `RESEND_API_KEY`, `EMAIL_FROM`
    - `NEXT_PUBLIC_LEAGUE_TIMEZONE`: e.g. `America/Chicago`
+   - `ANTHROPIC_API_KEY`: for the weekly recap email (optional)
+   - `RECAP_SEND_TO`: leave unset to send recaps to admins only; set to `league` to email every regular
 5. Redeploy, then sign in with your admin email.
 
 ## First season checklist
@@ -72,6 +74,8 @@ Open http://localhost:3000, choose **Email link**, enter your admin email, and c
 6. After week 11: **Schedule → Week 12 → Pair from standings**.
 
 **Subs:** add them under **Admin → Subs**, with any previous 9-hole scores. Three or more scores give them an established handicap before their first night; otherwise they play at 80% of that night's round until they have three. Each golfer's page shows their handicap, how it was calculated, and every round on record.
+
+**Weekly recap:** in a season's **Schedule** tab, **Mark complete** closes a week (golfers can no longer edit its scores; the admin still can) and emails a recap written by Claude. It roasts and praises each golfer relative to their own handicap and typical score, and includes the standings table and next week's matchups. Tune the voice under **Admin → Recaps**, where every recap is kept. Recaps go to admins only until `RECAP_SEND_TO=league` is set.
 
 A season you no longer need can be removed from its **Details** tab. Its schedule and scores are deleted, but golfers and carried-over rounds are kept.
 

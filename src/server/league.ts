@@ -10,7 +10,8 @@ import {
   seasons,
   weeks,
 } from "@/db/schema";
-import { addDays, today } from "@/lib/dates";
+import { addDays } from "@/lib/dates";
+import { splitWeeks } from "@/lib/weeks";
 import {
   computeHandicap,
   isComplete,
@@ -421,8 +422,7 @@ export function upcomingHandicap(data: SeasonData, golferId: number): HandicapRe
   return computeHandicap(priorDiffs(data.history, golferId, "9999-12-31"), null, data.rules);
 }
 
-/** The week to feature: the next one still open for scores, else the next by date, else the last. */
+/** The week to feature on the dashboard: the current week, or the last one once all are complete. */
 export function featuredWeek(weeks: WeekView[]): WeekView | undefined {
-  const t = today();
-  return weeks.find((w) => w.lockDate > t && !w.complete) ?? weeks.find((w) => w.date >= t) ?? weeks.at(-1);
+  return splitWeeks(weeks).current ?? weeks.at(-1);
 }

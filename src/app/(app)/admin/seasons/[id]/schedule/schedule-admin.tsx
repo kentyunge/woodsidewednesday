@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarClock, Plus, Trash2, Trophy, Wand2 } from "lucide-react";
+import { CalendarClock, Pencil, Plus, Trash2, Trophy, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { api } from "@/lib/api-client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDate } from "@/lib/dates";
+import { cn } from "@/lib/utils";
+import { splitWeeks } from "@/lib/weeks";
 import { useAction } from "../../../use-action";
 import { WeekCloseControls, type RecapSummary } from "./week-close";
 
@@ -25,7 +29,7 @@ interface WeekRow {
   closed: boolean;
   incomplete: number;
   recaps: RecapSummary[];
-  matches: { id: number; a: number; b: number | null; hasScores: boolean }[];
+  matches: { id: number; a: number; b: number | null; hasScores: boolean; summary: string }[];
 }
 
 interface Props {
@@ -83,8 +87,20 @@ function MatchEditor({ match, players }: { match: WeekRow["matches"][number]; pl
   );
 }
 
-function WeekCard({ week, players, seasonId, recipients }: { week: WeekRow; players: Props["players"]; seasonId: number; recipients: string }) {
+interface WeekCardProps {
+  week: WeekRow;
+  players: Props["players"];
+  seasonId: number;
+  recipients: string;
+  /** Pin as "This week". */
+  current?: boolean;
+  /** Completed weeks show results; the editor opens on demand. */
+  compact?: boolean;
+}
+
+function WeekCard({ week, players, seasonId, recipients, current, compact }: WeekCardProps) {
   const { busy, run } = useAction();
+  const [editing, setEditing] = useState(!compact);
   const [date, setDate] = useState(week.date);
   const [notes, setNotes] = useState(week.notes ?? "");
   const [kind, setKind] = useState(week.kind);
@@ -98,17 +114,26 @@ function WeekCard({ week, players, seasonId, recipients }: { week: WeekRow; play
   const unscheduled = players.filter((p) => !used.has(p.id));
 
   return (
-    <Card className="gap-3">
+    <Card className={cn("gap-3", current && "border-primary/50 ring-primary/20 ring-2")}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex flex-wrap items-center gap-2">
           Week {week.number}
-          {week.kind === "position" && <Badge>Position night</Badge>}
-          {week.complete && <Badge variant="secondary">Final</Badge>}
+          {current && <Badge>This week</Badge>}
+          {week.kind === "position" && <Badge variant="outline">Position night</Badge>}
+          {week.complete && !week.closed && <Badge variant="secondary">All scores in</Badge>}
         </CardTitle>
+        <CardDescription>{formatDate(week.date, { weekday: "short", month: "short", day: "numeric" })}</CardDescription>
         <CardAction className="flex gap-1">
-          <Button size="sm" variant="outline" onClick={() => setPostponeOpen(true)} disabled={busy}>
-            <CalendarClock /> Postpone
-          </Button>
+          {compact && (
+            <Button size="sm" variant="outline" onClick={() => setEditing((e) => !e)}>
+              <Pencil /> {editing ? "Done" : "Edit"}
+            </Button>
+          )}
+          {!week.closed && (
+            <Button size="sm" variant="outline" onClick={() => setPostponeOpen(true)} disabled={busy}>
+              <CalendarClock /> Postpone
+            </Button>
+          )}
           <Button
             size="icon-sm"
             variant="ghost"
@@ -134,65 +159,78 @@ function WeekCard({ week, players, seasonId, recipients }: { week: WeekRow; play
           recaps={week.recaps}
           recipients={recipients}
         />
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[10rem_10rem_1fr]">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
-          <NativeSelect value={kind} onChange={(e) => setKind(e.target.value as WeekRow["kind"])} aria-label="Type">
-            <option value="regular">Regular</option>
-            <option value="position">Position night</option>
-          </NativeSelect>
-          <Input className="col-span-2 sm:col-span-1" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-        {dirty && (
-          <Button size="sm" disabled={busy} onClick={() => run(() => api(`/weeks/${week.id}`, { method: "PATCH", body: { date, notes: notes || null, kind } }), "Week saved")}>
-            Save week
-          </Button>
+        {!editing && (
+          <ul className="space-y-1 text-sm">
+            {week.matches.map((m) => (
+              <li key={m.id} className="tabular-nums">
+                {m.summary}
+              </li>
+            ))}
+          </ul>
         )}
-        <div className="space-y-2">
-          {week.matches.map((m) => (
-            <MatchEditor key={`${m.id}-${m.a}-${m.b}`} match={m} players={players} />
-          ))}
-          {week.kind === "position" && (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={async () => {
-                const r = await run(
-                  () => api<{ incompleteWeeks: number[] }>(`/seasons/${seasonId}/position-night`, { body: { weekId: week.id } }),
-                  "Position night paired from standings",
-                );
-                if (r?.incompleteWeeks.length) alert(`Heads up: weeks ${r.incompleteWeeks.join(", ")} aren't complete yet. Re-pair after scores are in.`);
-              }}
-            >
-              <Trophy /> Pair from standings (1v2, 3v4…)
-            </Button>
-          )}
-          {unscheduled.length > 0 && (
-            <div className="border-t pt-3">
-              <div className="text-muted-foreground mb-2 text-xs">
-                Not scheduled: {unscheduled.map((p) => p.name).join(", ")}
-              </div>
-              <div className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
-                <GolferSelect value={newA} onChange={setNewA} players={players} />
-                <span className="text-muted-foreground text-xs">vs</span>
-                <GolferSelect value={newB} onChange={setNewB} players={players} allowBye />
-                <Button
-                  size="icon-sm"
-                  title="Add match"
-                  disabled={busy || !newA}
-                  onClick={() =>
-                    run(() => api(`/weeks/${week.id}/matches`, { body: { golferAId: newA, golferBId: newB } }), "Match added").then(() => {
-                      setNewA(null);
-                      setNewB(null);
-                    })
-                  }
-                >
-                  <Plus />
-                </Button>
-              </div>
+        {editing && (
+          <>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[10rem_10rem_1fr]">
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
+              <NativeSelect value={kind} onChange={(e) => setKind(e.target.value as WeekRow["kind"])} aria-label="Type">
+                <option value="regular">Regular</option>
+                <option value="position">Position night</option>
+              </NativeSelect>
+              <Input className="col-span-2 sm:col-span-1" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
-          )}
-        </div>
+            {dirty && (
+              <Button size="sm" disabled={busy} onClick={() => run(() => api(`/weeks/${week.id}`, { method: "PATCH", body: { date, notes: notes || null, kind } }), "Week saved")}>
+                Save week
+              </Button>
+            )}
+            <div className="space-y-2">
+              {week.matches.map((m) => (
+                <MatchEditor key={`${m.id}-${m.a}-${m.b}`} match={m} players={players} />
+              ))}
+              {week.kind === "position" && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={async () => {
+                    const r = await run(
+                      () => api<{ incompleteWeeks: number[] }>(`/seasons/${seasonId}/position-night`, { body: { weekId: week.id } }),
+                      "Position night paired from standings",
+                    );
+                    if (r?.incompleteWeeks.length) alert(`Heads up: weeks ${r.incompleteWeeks.join(", ")} aren't complete yet. Re-pair after scores are in.`);
+                  }}
+                >
+                  <Trophy /> Pair from standings (1v2, 3v4…)
+                </Button>
+              )}
+              {unscheduled.length > 0 && (
+                <div className="border-t pt-3">
+                  <div className="text-muted-foreground mb-2 text-xs">
+                    Not scheduled: {unscheduled.map((p) => p.name).join(", ")}
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
+                    <GolferSelect value={newA} onChange={setNewA} players={players} />
+                    <span className="text-muted-foreground text-xs">vs</span>
+                    <GolferSelect value={newB} onChange={setNewB} players={players} allowBye />
+                    <Button
+                      size="icon-sm"
+                      title="Add match"
+                      disabled={busy || !newA}
+                      onClick={() =>
+                        run(() => api(`/weeks/${week.id}/matches`, { body: { golferAId: newA, golferBId: newB } }), "Match added").then(() => {
+                          setNewA(null);
+                          setNewB(null);
+                        })
+                      }
+                    >
+                      <Plus />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </CardContent>
 
       <Dialog open={postponeOpen} onOpenChange={setPostponeOpen}>
@@ -229,9 +267,12 @@ export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks, 
   const [start, setStart] = useState(season.startDate);
   const [positionNight, setPositionNight] = useState(true);
 
-  return (
-    <div className="space-y-4">
-      <Card className="gap-3">
+  const { current, upcoming, completed } = splitWeeks(weeks);
+  const card = (w: WeekRow, extra: Partial<WeekCardProps> = {}) => (
+    <WeekCard key={`${w.id}-${w.date}-${w.kind}-${w.notes}-${w.closed}`} week={w} players={players} seasonId={season.id} recipients={recipients} {...extra} />
+  );
+  const generateCard = (
+    <Card className="gap-3">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wand2 className="size-5" /> Generate schedule
@@ -273,16 +314,39 @@ export function ScheduleAdmin({ season, players, playerCount, hasScores, weeks, 
           )}
         </CardContent>
       </Card>
+  );
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        {weeks.map((w) => (
-          <WeekCard key={`${w.id}-${w.date}-${w.kind}-${w.notes}`} week={w} players={players} seasonId={season.id} recipients={recipients} />
-        ))}
-      </div>
-
-      <Button variant="outline" disabled={busy} onClick={() => run(() => api(`/seasons/${season.id}/weeks`, { body: {} }), "Week added")}>
-        <Plus /> Add week
-      </Button>
+  return (
+    <div className="space-y-4">
+      {weeks.length === 0 && generateCard}
+      {weeks.length > 0 && (
+        <Tabs defaultValue="current">
+          <TabsList>
+            <TabsTrigger value="current">This week &amp; upcoming ({upcoming.length + (current ? 1 : 0)})</TabsTrigger>
+            <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="current" className="space-y-4 pt-2">
+            {current ? card(current, { current: true }) : <p className="text-muted-foreground text-sm">Every week is complete. That&apos;s a wrap!</p>}
+            {upcoming.length > 0 && (
+              <>
+                <h3 className="text-muted-foreground pt-2 text-sm font-medium tracking-wide uppercase">Upcoming</h3>
+                <div className="grid gap-4 xl:grid-cols-2">{upcoming.map((w) => card(w))}</div>
+              </>
+            )}
+            <Button variant="outline" disabled={busy} onClick={() => run(() => api(`/seasons/${season.id}/weeks`, { body: {} }), "Week added")}>
+              <Plus /> Add week
+            </Button>
+            {!hasScores && generateCard}
+          </TabsContent>
+          <TabsContent value="completed" className="space-y-4 pt-2">
+            {completed.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No weeks marked complete yet. Use Mark complete on this week once the scores are in.</p>
+            ) : (
+              <div className="grid gap-4 xl:grid-cols-2">{completed.map((w) => card(w, { compact: true }))}</div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

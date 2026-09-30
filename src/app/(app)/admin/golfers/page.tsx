@@ -7,7 +7,15 @@ export default async function GolfersAdminPage() {
   const golfers = await listGolfers();
   return (
     <GolfersAdmin
-      golfers={golfers.map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone, active: g.active, linked: !!g.userId }))}
+      golfers={golfers.map((g) => ({
+        id: g.id,
+        name: g.name,
+        email: g.email,
+        phone: g.phone,
+        active: g.active,
+        isSub: g.isSub,
+        linked: !!g.userId,
+      }))}
     />
   );
 }

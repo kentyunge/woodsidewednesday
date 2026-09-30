@@ -16,6 +16,7 @@ interface G {
   email: string | null;
   phone: string | null;
   active: boolean;
+  isSub: boolean;
   linked: boolean;
 }
 
@@ -49,6 +50,16 @@ function GolferRow({ g }: { g: G }) {
           size="sm"
           variant="ghost"
           disabled={busy}
+          onClick={() =>
+            run(() => api(`/golfers/${g.id}`, { method: "PATCH", body: { isSub: !g.isSub } }), `${g.name} moved to ${g.isSub ? "regulars" : "subs"}`)
+          }
+        >
+          {g.isSub ? "Make regular" : "Make sub"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
           onClick={() => run(() => api(`/golfers/${g.id}`, { method: "PATCH", body: { active: !g.active } }), g.active ? "Archived" : "Restored")}
         >
           {g.active ? "Archive" : "Restore"}
@@ -63,7 +74,26 @@ export function GolfersAdmin({ golfers }: { golfers: G[] }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [isSub, setIsSub] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const shown = golfers.filter((g) => showArchived || g.active);
+  const group = (title: string, description: string, list: G[]) => (
+    <Card className="gap-1">
+      <CardHeader>
+        <CardTitle>
+          {title} ({list.length})
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {list.length === 0 ? (
+          <p className="text-muted-foreground border-t py-3 text-sm">None yet.</p>
+        ) : (
+          list.map((g) => <GolferRow key={`${g.id}-${g.name}-${g.email}-${g.phone}-${g.active}-${g.isSub}`} g={g} />)
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-4">
@@ -77,7 +107,7 @@ export function GolfersAdmin({ golfers }: { golfers: G[] }) {
             className="grid gap-2 sm:grid-cols-[1fr_1.3fr_1fr_auto]"
             onSubmit={(e) => {
               e.preventDefault();
-              run(() => api("/golfers", { body: { name, email: email || null, phone: phone || null } }), "Golfer added").then(() => {
+              run(() => api("/golfers", { body: { name, email: email || null, phone: phone || null, isSub } }), isSub ? "Sub added" : "Golfer added").then(() => {
                 setName("");
                 setEmail("");
                 setPhone("");
@@ -90,27 +120,19 @@ export function GolfersAdmin({ golfers }: { golfers: G[] }) {
             <Button type="submit" disabled={busy}>
               Add
             </Button>
+            <label className="flex items-center gap-2 text-sm sm:col-span-4">
+              <input type="checkbox" className="accent-primary size-4" checked={isSub} onChange={(e) => setIsSub(e.target.checked)} />
+              Sub (fills in for regulars rather than holding a spot)
+            </label>
           </form>
         </CardContent>
       </Card>
-      <Card className="gap-1">
-        <CardHeader>
-          <CardTitle>Golfers</CardTitle>
-          <CardDescription>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" className="accent-primary" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-              Show archived
-            </label>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {golfers
-            .filter((g) => showArchived || g.active)
-            .map((g) => (
-              <GolferRow key={`${g.id}-${g.name}-${g.email}-${g.phone}-${g.active}`} g={g} />
-            ))}
-        </CardContent>
-      </Card>
+      <label className="text-muted-foreground flex items-center gap-2 px-1 text-sm">
+        <input type="checkbox" className="accent-primary" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+        Show archived
+      </label>
+      {group("Regulars", "Golfers who hold a spot in the league. Pick each season's roster on the season's Players tab.", shown.filter((g) => !g.isSub))}
+      {group("Subs", "Golfers who fill in when a regular can't make it.", shown.filter((g) => g.isSub))}
     </div>
   );
 }

@@ -63,6 +63,26 @@ export function GolferContact({ golfer }: { golfer: Contact }) {
   );
 }
 
+/** Moves a golfer between the regulars and subs groups. */
+export function SubToggle({ golfer }: { golfer: { id: number; name: string; isSub: boolean } }) {
+  const { busy, run } = useAction();
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy}
+      onClick={() =>
+        run(
+          () => api(`/golfers/${golfer.id}`, { method: "PATCH", body: { isSub: !golfer.isSub } }),
+          `${golfer.name} moved to ${golfer.isSub ? "regulars" : "subs"}`,
+        )
+      }
+    >
+      {golfer.isSub ? "Make regular" : "Make sub"}
+    </Button>
+  );
+}
+
 export function AddPreviousScores({ golferId }: { golferId: number }) {
   const { busy, run } = useAction();
   const [rows, setRows] = useState<ScoreRow[]>([emptyRow()]);

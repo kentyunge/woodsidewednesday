@@ -15,6 +15,13 @@
       "when": 1790773147313,
       "tag": "0001_week_recaps",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790793198873,
+      "tag": "0002_golfer_is_sub",
+      "breakpoints": true
     }
   ]
 }

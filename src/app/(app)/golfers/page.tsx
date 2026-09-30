@@ -13,6 +13,8 @@ export default async function GolfersPage({ searchParams }: PageProps<"/golfers"
   if (!data || !season) return <p className="text-muted-foreground">No season yet.</p>;
   const regulars = new Set(data.players.map((p) => p.id));
   const all = [...data.golfers.values()].filter((g) => g.active).sort((a, b) => a.name.localeCompare(b.name));
+  const subs = all.filter((g) => !regulars.has(g.id) && g.isSub);
+  const others = all.filter((g) => !regulars.has(g.id) && !g.isSub);
   const rows = (list: typeof all) =>
     list.map((g) => {
       const h = upcomingHandicap(data, g.id);
@@ -78,10 +80,23 @@ export default async function GolfersPage({ searchParams }: PageProps<"/golfers"
         <CardContent className="px-2 sm:px-4">
           <Table>
             {head}
-            <TableBody>{rows(all.filter((g) => !regulars.has(g.id)))}</TableBody>
+            <TableBody>{rows(subs)}</TableBody>
           </Table>
         </CardContent>
       </Card>
+      {others.length > 0 && (
+        <Card className="gap-3">
+          <CardHeader>
+            <CardTitle>Not playing this season</CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-4">
+            <Table>
+              {head}
+              <TableBody>{rows(others)}</TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

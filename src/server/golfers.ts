@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { golfers, seasonPlayers, seasons, weeks } from "@/db/schema";
 import { computeHandicap, DEFAULT_HANDICAP_RULES, type HandicapResult, type HandicapRules } from "@/lib/scoring";
@@ -77,23 +77,19 @@ export interface SubRow {
   roundsNeeded: number;
 }
 
-/** Active golfers who aren't regulars in the current season. */
+/** Active golfers flagged as subs. */
 export async function listSubs(): Promise<SubRow[]> {
-  const season = await getCurrentSeason();
-  const [all, regulars, history, rules] = await Promise.all([
-    db.select().from(golfers).where(eq(golfers.active, true)),
-    season
-      ? db.select({ id: seasonPlayers.golferId }).from(seasonPlayers).where(eq(seasonPlayers.seasonId, season.id))
-      : Promise.resolve([]),
+  const [subs, history, rules] = await Promise.all([
+    db
+      .select()
+      .from(golfers)
+      .where(and(eq(golfers.active, true), eq(golfers.isSub, true)))
+      .orderBy(asc(golfers.name)),
     loadCoursePars().then(loadHistory),
     currentRules(),
   ]);
-  const regularIds = new Set(regulars.map((r) => r.id));
-  return all
-    .filter((g) => !regularIds.has(g.id))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((golfer) => {
-      const rounds = history.get(golfer.id) ?? [];
-      return { golfer, rounds: rounds.length, lastPlayed: rounds.at(-1)?.date ?? null, ...handicapFrom(rounds, rules) };
-    });
+  return subs.map((golfer) => {
+    const rounds = history.get(golfer.id) ?? [];
+    return { golfer, rounds: rounds.length, lastPlayed: rounds.at(-1)?.date ?? null, ...handicapFrom(rounds, rules) };
+  });
 }

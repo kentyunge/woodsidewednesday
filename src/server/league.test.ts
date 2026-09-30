@@ -268,7 +268,7 @@ describe("league flow", () => {
 
 describe("subs", () => {
   it("adds a sub with previous scores that establish a handicap", async () => {
-    const g = await createGolfer({ name: "Sub Established" }, [
+    const g = await createGolfer({ name: "Sub Established", isSub: true }, [
       { playedOn: "2025-07-01", gross: 46 },
       { playedOn: "2025-07-08", gross: 44 },
       { playedOn: "2025-07-15", gross: 45 },
@@ -281,7 +281,7 @@ describe("subs", () => {
   });
 
   it("keeps a sub provisional until they have enough rounds", async () => {
-    const g = await createGolfer({ name: "Sub New" }, [{ playedOn: "2025-07-01", gross: 50 }]);
+    const g = await createGolfer({ name: "Sub New", isSub: true }, [{ playedOn: "2025-07-01", gross: 50 }]);
     const view = await golferRounds(g.id);
     expect(view.handicap.method).toBe("pending");
     expect(view.roundsNeeded).toBe(2);
@@ -294,12 +294,23 @@ describe("subs", () => {
     expect((await db.select().from(golfers)).length).toBe(before);
   });
 
-  it("lists everyone who isn't a regular in the current season", async () => {
+  it("lists golfers flagged as subs", async () => {
     const subs = await listSubs();
     const names = subs.map((s) => s.golfer.name);
     expect(names).toContain("Sub Established");
-    expect(names).toContain("Sub S"); // subbed in during the league flow
+    expect(names).toContain("Sub S"); // created as a new sub during score entry
     expect(subs.some((s) => ids.includes(s.golfer.id))).toBe(false);
+  });
+
+  it("moves a golfer between regulars and subs", async () => {
+    const g = await createGolfer({ name: "Flip" });
+    expect(g.isSub).toBe(false);
+    expect((await listSubs()).some((s) => s.golfer.id === g.id)).toBe(false);
+    await updateGolfer(g.id, { isSub: true });
+    expect((await listSubs()).some((s) => s.golfer.id === g.id)).toBe(true);
+    expect((await golferRounds(g.id)).golfer.isSub).toBe(true);
+    await updateGolfer(g.id, { isSub: false });
+    expect((await listSubs()).some((s) => s.golfer.id === g.id)).toBe(false);
   });
 
   it("skips out-of-range rows when importing", async () => {

@@ -15,6 +15,7 @@ export interface GolferInput {
   email?: string | null;
   phone?: string | null;
   active?: boolean;
+  isSub?: boolean;
 }
 
 const normEmail = (e?: string | null) => (e ? e.trim().toLowerCase() : null);
@@ -31,7 +32,13 @@ export async function createGolfer(input: GolferInput, previousRounds: { playedO
   return db.transaction(async (tx) => {
     const [g] = await tx
       .insert(golfers)
-      .values({ name: input.name.trim(), email: normEmail(input.email), phone: input.phone ?? null, active: input.active ?? true })
+      .values({
+        name: input.name.trim(),
+        email: normEmail(input.email),
+        phone: input.phone ?? null,
+        active: input.active ?? true,
+        isSub: input.isSub ?? false,
+      })
       .returning();
     if (previousRounds.length) {
       await tx
@@ -72,6 +79,7 @@ export async function updateGolfer(id: number, input: Partial<GolferInput>) {
         ...(input.email !== undefined && { email }),
         ...(input.phone !== undefined && { phone: input.phone }),
         ...(input.active !== undefined && { active: input.active }),
+        ...(input.isSub !== undefined && { isSub: input.isSub }),
         userId,
       })
       .where(eq(golfers.id, id))

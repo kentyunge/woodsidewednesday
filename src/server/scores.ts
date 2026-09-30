@@ -85,7 +85,7 @@ export async function saveEntry(actor: Actor | null, matchId: number, side: "A" 
   let playerId: number | null = null;
   let ghostId: number | null = null;
   if (input.status === "sub") {
-    if (input.newSubName?.trim()) playerId = (await createGolfer({ name: input.newSubName })).id;
+    if (input.newSubName?.trim()) playerId = (await createGolfer({ name: input.newSubName, isSub: true })).id;
     else playerId = input.playerId ?? null;
     if (!playerId) throw badRequest("Choose the sub who played");
     if (playerId === match.a.owner.id || playerId === match.b?.owner.id) throw badRequest("Sub can't be a golfer in this match");

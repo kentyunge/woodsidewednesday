@@ -25,7 +25,7 @@ export default async function MatchPage({ params }: PageProps<"/matches/[id]">) 
   const subOptions = [...data.golfers.values()]
     .filter((g) => g.active && !inMatch.has(g.id))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map((g) => ({ id: g.id, name: g.name, regular: data.players.some((p) => p.id === g.id) }));
+    .map((g) => ({ id: g.id, name: g.name, isSub: g.isSub }));
 
   return (
     <div className="space-y-4">

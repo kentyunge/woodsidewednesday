@@ -14,8 +14,32 @@ import { fmt } from "@/lib/utils";
 import { useAction } from "../use-action";
 
 interface Props {
-  golfers: { id: number; name: string; handicap: number | null; method: string; basis: number[] }[];
+  golfers: { id: number; name: string; isSub: boolean; handicap: number | null; method: string; basis: number[] }[];
   rounds: { id: number; golferId: number; playedOn: string; gross: number; note: string | null }[];
+}
+
+type G = Props["golfers"][number];
+
+/** Regulars first, then subs. */
+function groups(golfers: G[]): [string, G[]][] {
+  return (
+    [
+      ["Regulars", golfers.filter((g) => !g.isSub)],
+      ["Subs", golfers.filter((g) => g.isSub)],
+    ] as [string, G[]][]
+  ).filter(([, list]) => list.length > 0);
+}
+
+function GolferOptions({ golfers }: { golfers: G[] }) {
+  return groups(golfers).map(([label, list]) => (
+    <optgroup key={label} label={label}>
+      {list.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.name}
+        </option>
+      ))}
+    </optgroup>
+  ));
 }
 
 export function HandicapsAdmin({ golfers, rounds }: Props) {
@@ -43,21 +67,28 @@ export function HandicapsAdmin({ golfers, rounds }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {golfers.map((g) => (
-                <TableRow key={g.id}>
-                  <TableCell>
-                    <Link href={`/admin/golfers/${g.id}`} className="hover:underline">
-                      {g.name}
-                    </Link>
+              {groups(golfers).map(([label, list]) => [
+                <TableRow key={label} className="bg-muted/50 hover:bg-muted/50">
+                  <TableCell colSpan={3} className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                    {label}
                   </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">
-                    {g.method === "rolling" ? fmt(g.handicap) : <span className="text-muted-foreground text-xs font-normal">provisional</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs tabular-nums">
-                    {g.basis.map((d) => (d > 0 ? `+${d}` : d)).join(", ") || "–"}
-                  </TableCell>
-                </TableRow>
-              ))}
+                </TableRow>,
+                ...list.map((g) => (
+                  <TableRow key={g.id}>
+                    <TableCell>
+                      <Link href={`/admin/golfers/${g.id}`} className="hover:underline">
+                        {g.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {g.method === "rolling" ? fmt(g.handicap) : <span className="text-muted-foreground text-xs font-normal">provisional</span>}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs tabular-nums">
+                      {g.basis.map((d) => (d > 0 ? `+${d}` : d)).join(", ") || "–"}
+                    </TableCell>
+                  </TableRow>
+                )),
+              ])}
             </TableBody>
           </Table>
         </CardContent>
@@ -111,11 +142,7 @@ export function HandicapsAdmin({ golfers, rounds }: Props) {
             >
               <NativeSelect value={golferId} onChange={(e) => setGolferId(e.target.value ? Number(e.target.value) : "")} required className="col-span-2 sm:col-span-1">
                 <option value="">Golfer…</option>
-                {golfers.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
+                <GolferOptions golfers={golfers} />
               </NativeSelect>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
               <Input inputMode="numeric" placeholder="Gross" value={gross} onChange={(e) => setGross(e.target.value.replace(/\D/g, ""))} required />
@@ -125,11 +152,7 @@ export function HandicapsAdmin({ golfers, rounds }: Props) {
             </form>
             <NativeSelect value={filter} onChange={(e) => setFilter(e.target.value ? Number(e.target.value) : "")}>
               <option value="">All golfers</option>
-              {golfers.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
+              <GolferOptions golfers={golfers} />
             </NativeSelect>
             <Table>
               <TableBody>

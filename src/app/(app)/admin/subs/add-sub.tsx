@@ -47,7 +47,7 @@ export function AddSubButton() {
             e.preventDefault();
             const previousRounds = filledRows(rows).map(({ playedOn, gross }) => ({ playedOn, gross }));
             const golfer = await run(
-              () => api<{ id: number }>("/golfers", { body: { name, email: email || null, phone: phone || null, previousRounds } }),
+              () => api<{ id: number }>("/golfers", { body: { name, email: email || null, phone: phone || null, isSub: true, previousRounds } }),
               `${name} added`,
             );
             if (golfer) {

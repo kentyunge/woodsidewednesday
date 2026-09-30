@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { PreviousScores, emptyRow, filledRows, type ScoreRow } from "../../previous-scores";
+import { SetPasswordButton } from "../../set-password";
 import { useAction } from "../../use-action";
 
 interface Contact {
@@ -50,9 +51,12 @@ export function GolferContact({ golfer }: { golfer: Contact }) {
               <Input id="g-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
           </div>
-          <Button type="submit" disabled={busy || !dirty}>
-            Save
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={busy || !dirty}>
+              Save
+            </Button>
+            <SetPasswordButton golfer={golfer} />
+          </div>
         </form>
       </CardContent>
     </Card>

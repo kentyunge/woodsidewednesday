@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { golfers, historicalRounds, matchEntries, matches, seasonPlayers, seasons, user, weeks } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import { addDays, today } from "@/lib/dates";
 import { positionNight, roundRobin, shuffle } from "@/lib/scoring";
 import { ensureDefaultCourse } from "./bootstrap";
@@ -77,6 +78,31 @@ export async function updateGolfer(id: number, input: Partial<GolferInput>) {
       .returning();
     return g;
   });
+}
+
+/**
+ * Give a golfer a password so they can sign in without email. Creates their login if they've
+ * never signed in; replaces the password if they have one. They can change it on their profile.
+ */
+export async function setGolferPassword(golferId: number, password: string) {
+  const [g] = await db.select().from(golfers).where(eq(golfers.id, golferId));
+  if (!g) throw notFound("Golfer not found");
+  if (!g.email) throw badRequest("Add an email for this golfer first; it's what they sign in with.");
+  if (password.length < 8) throw badRequest("Passwords need at least 8 characters.");
+
+  const ctx = await auth.$context;
+  let userId = g.userId ?? (await ctx.internalAdapter.findUserByEmail(g.email))?.user.id ?? null;
+  if (!userId) {
+    const created = await ctx.internalAdapter.createUser({ email: g.email, name: g.name, emailVerified: true }, { method: "admin" });
+    userId = created.id;
+  }
+  if (g.userId !== userId) await db.update(golfers).set({ userId }).where(eq(golfers.id, golferId));
+
+  const hash = await ctx.password.hash(password);
+  const accounts = await ctx.internalAdapter.findAccounts(userId);
+  if (accounts.some((a) => a.providerId === "credential")) await ctx.internalAdapter.updatePassword(userId, hash);
+  else await ctx.internalAdapter.linkAccount({ userId, providerId: "credential", accountId: userId, password: hash });
+  return { email: g.email };
 }
 
 // ---------- historical rounds (handicap carry-over) ----------

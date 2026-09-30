@@ -661,6 +661,21 @@ api.openapi(
 
 api.openapi(
   route({
+    method: "post",
+    path: "/golfers/{id}/password",
+    tags: ["Golfers"],
+    summary: "Set a golfer's password (creates their login if needed)",
+    request: { params: S.IdParam, ...body(z.object({ password: z.string().min(8).max(128) })) },
+    responses: json(z.object({ email: z.string() })),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    return c.json(await admin.setGolferPassword(c.req.valid("param").id, c.req.valid("json").password), 200);
+  },
+);
+
+api.openapi(
+  route({
     method: "get",
     path: "/golfers/{id}/seasons",
     tags: ["Golfers"],

@@ -9,12 +9,13 @@ const TABS = [
   { href: "/admin/golfers", label: "Golfers", match: (p: string) => p.startsWith("/admin/golfers") },
   { href: "/admin/subs", label: "Subs", match: (p: string) => p.startsWith("/admin/subs") },
   { href: "/admin/handicaps", label: "Handicaps", match: (p: string) => p.startsWith("/admin/handicaps") },
+  { href: "/admin/recaps", label: "Recaps", match: (p: string) => p.startsWith("/admin/recaps") },
 ];
 
 export function AdminTabs() {
   const pathname = usePathname();
   return (
-    <nav className="bg-muted inline-flex rounded-lg p-1">
+    <nav className="bg-muted inline-flex max-w-full overflow-x-auto rounded-lg p-1">
       {TABS.map((t) => (
         <Link
           key={t.href}

@@ -68,6 +68,8 @@ export interface WeekView extends Week {
   /** Golfers (non-admin) can enter scores until this date. */
   lockDate: string;
   complete: boolean;
+  /** The admin marked the week complete. */
+  closed: boolean;
 }
 
 export interface StandingRow {
@@ -346,6 +348,7 @@ export async function loadSeason(seasonId: number): Promise<SeasonData> {
       matches: ms,
       lockDate: weekRows[i + 1]?.date ?? addDays(w.date, 7),
       complete: ms.length > 0 && ms.every((m) => m.complete),
+      closed: w.closedAt !== null,
     };
   });
 

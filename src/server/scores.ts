@@ -36,6 +36,7 @@ export function editAccess(actor: Actor | null, match: MatchView, week: WeekView
   if (actor.isAdmin) return { allowed: true, admin: true };
   const inMatch = actor.golferId !== null && [match.a.owner.id, match.b?.owner.id].includes(actor.golferId);
   if (!inMatch) return { allowed: false, reason: "Only golfers in this match can enter scores" };
+  if (week.closed) return { allowed: false, reason: "This week has been marked complete; ask the admin to change scores" };
   if (today() >= week.lockDate) return { allowed: false, reason: `Scores locked on ${week.lockDate}; ask the admin` };
   return { allowed: true, admin: false };
 }

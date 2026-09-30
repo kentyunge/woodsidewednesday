@@ -49,7 +49,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
                 </CardDescription>
                 <CardAction className="flex gap-1">
                   {w.postponements > 0 && <Badge variant="outline">Postponed</Badge>}
-                  {w.complete ? (
+                  {w.closed || w.complete ? (
                     <Badge variant="secondary">Final</Badge>
                   ) : open ? (
                     <Badge>Scores open</Badge>

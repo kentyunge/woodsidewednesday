@@ -84,7 +84,11 @@ export function GolferDashboard({
         <StatTile
           label="Handicap"
           value={fmt(s.handicap)}
-          sub={s.handicapMethod === "rolling" ? "90% of last 5 rounds" : "not yet established"}
+          sub={
+            s.handicapMethod === "rolling"
+              ? `${Math.round(data.rules.percent * 100)}% of last ${data.rules.rollingRounds} rounds`
+              : "not yet established"
+          }
         />
         <StatTile label="Avg gross" value={fmt(s.avgGross)} sub={`${s.rounds} round${s.rounds === 1 ? "" : "s"}`} />
         <StatTile label="Low gross" value={fmt(s.lowGross)} />

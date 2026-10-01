@@ -7,6 +7,8 @@ import { requirePageActor, resolveSeason } from "@/server/session";
 
 export const metadata = { title: "Golfers" };
 
+const pct = (f: number) => `${Math.round(f * 100)}%`;
+
 export default async function GolfersPage({ searchParams }: PageProps<"/golfers">) {
   await requirePageActor();
   const { season, data } = await resolveSeason((await searchParams).season);
@@ -75,7 +77,10 @@ export default async function GolfersPage({ searchParams }: PageProps<"/golfers"
       <Card className="gap-3">
         <CardHeader>
           <CardTitle>Subs</CardTitle>
-          <CardDescription>Subs play at 80% of the night&apos;s round until they have 3 rounds, then 90% of their rolling average.</CardDescription>
+          <CardDescription>
+            Subs play at {pct(data.rules.provisionalPercent)} of the night&apos;s round until they have {data.rules.establishRounds} rounds, then{" "}
+            {pct(data.rules.percent)} of their rolling average.
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-4">
           <Table>

@@ -110,6 +110,21 @@ export const SeasonInput = z
   })
   .openapi("SeasonInput");
 
+export const SeasonImportResult = z
+  .object({
+    dryRun: z.boolean(),
+    seasonId: z.number().nullable(),
+    seasonName: z.string(),
+    players: z.array(z.string()),
+    previousRounds: z.number(),
+    weeks: z.number(),
+    matches: z.number(),
+    cards: z.number(),
+    newSubs: z.array(z.string()),
+    existingSubs: z.array(z.string()),
+  })
+  .openapi("SeasonImportResult");
+
 const Handicap = z.object({
   handicap: z.number().nullable(),
   raw: z.number().nullable(),

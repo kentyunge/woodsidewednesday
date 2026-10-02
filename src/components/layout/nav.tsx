@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Flag, LayoutDashboard, LogOut, Menu, Settings, Shield, User, Users } from "lucide-react";
+import { CalendarDays, Flag, LayoutDashboard, LogOut, Settings, Shield, User, UserCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { authClient } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +13,8 @@ interface NavProps {
   hasGolfer: boolean;
 }
 
-export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
+function useLinks({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer">) {
   const pathname = usePathname();
-  const router = useRouter();
-  // Controlled so tapping a link (client-side navigation) closes the mobile menu.
-  const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     { href: "/", label: "League", icon: LayoutDashboard },
     ...(hasGolfer ? [{ href: "/me", label: "My Stats", icon: User }] : []),
@@ -28,16 +23,25 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
   const active = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  return { links, active, pathname };
+}
 
-  async function signOut() {
-    setMenuOpen(false);
+export function useSignOut() {
+  const router = useRouter();
+  return async () => {
     await authClient.signOut();
     router.push("/login");
     router.refresh();
-  }
+  };
+}
+
+/** Top bar. On phones it's just the title and a profile button; the sections live in the bottom tab bar. */
+export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
+  const { links, active, pathname } = useLinks({ isAdmin, hasGolfer });
+  const signOut = useSignOut();
 
   return (
-    <header className="bg-primary text-primary-foreground sticky top-0 z-40 shadow-sm">
+    <header className="bg-primary text-primary-foreground sticky top-0 z-40 pt-[env(safe-area-inset-top)] shadow-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <Flag className="size-5" />
@@ -66,43 +70,45 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
             <LogOut />
           </Button>
         </div>
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="ml-auto hover:bg-white/15 hover:text-primary-foreground md:hidden">
-              <Menu />
-              <span className="sr-only">Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-64">
-            <SheetHeader>
-              <SheetTitle>{name}</SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col gap-1 px-2">
-              {[...links, { href: "/profile", label: "Profile", icon: Settings }].map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium hover:bg-accent",
-                    active(l.href) && "bg-accent",
-                  )}
-                >
-                  <l.icon className="size-4" />
-                  {l.label}
-                </Link>
-              ))}
-              <button
-                onClick={signOut}
-                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium hover:bg-accent"
-              >
-                <LogOut className="size-4" />
-                Sign out
-              </button>
-            </nav>
-          </SheetContent>
-        </Sheet>
+        <Link
+          href="/profile"
+          className={cn("-mr-2 ml-auto rounded-full p-2 hover:bg-white/15 md:hidden", pathname.startsWith("/profile") && "bg-white/20")}
+        >
+          <UserCircle className="size-6" />
+          <span className="sr-only">Profile</span>
+        </Link>
       </div>
     </header>
+  );
+}
+
+/** App-style tab bar pinned to the bottom of the screen on phones. */
+export function BottomTabs({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer">) {
+  const { links, active } = useLinks({ isAdmin, hasGolfer });
+  return (
+    <nav
+      aria-label="Sections"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+    >
+      <div className="flex">
+        {links.map((l) => {
+          const on = active(l.href);
+          return (
+            <Link
+              key={l.href}
+              href={l.href}
+              aria-current={on ? "page" : undefined}
+              className={cn(
+                "flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium [-webkit-tap-highlight-color:transparent]",
+                on ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <l.icon className={cn("size-5", on && "stroke-[2.5]")} />
+              {l.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

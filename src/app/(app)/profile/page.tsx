@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account, golfers } from "@/db/schema";
+import { InstallCard } from "@/components/layout/install-prompt";
 import { requirePageActor } from "@/server/session";
 import { ProfileForm } from "./profile-form";
 
@@ -16,6 +17,7 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+      <InstallCard />
       <ProfileForm
         name={actor.name}
         email={actor.email}

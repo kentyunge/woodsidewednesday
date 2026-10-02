@@ -30,6 +30,11 @@ function isIos() {
   return /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
 }
 
+/** Phones and tablets only: desktop Chrome/Edge also offer to install, but the banner isn't meant for computers. */
+function isMobile() {
+  return isIos() || /Android|Mobi/i.test(navigator.userAgent) || window.matchMedia("(pointer: coarse)").matches;
+}
+
 function dismissedRecently() {
   try {
     const at = Number(localStorage.getItem(DISMISS_KEY));
@@ -68,7 +73,7 @@ export function useInstall() {
   }, []);
 
   let platform: Platform = null;
-  if (client && !installed && !isStandalone()) platform = isIos() ? "ios" : event ? "installable" : null;
+  if (client && !installed && !isStandalone() && isMobile()) platform = isIos() ? "ios" : event ? "installable" : null;
 
   async function install() {
     if (!event) return;

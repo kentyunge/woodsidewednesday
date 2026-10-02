@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ArrowLeft, Lock, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scorecard, StrokeSummary } from "@/components/league/scorecard";
 import { formatDate } from "@/lib/dates";
@@ -57,6 +58,15 @@ export default async function MatchPage({ params }: PageProps<"/matches/[id]">) 
               ))}
             </div>
             <StrokeSummary match={match} />
+          </CardContent>
+        )}
+        {access.allowed && !match.bye && (
+          <CardContent>
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link href={`/matches/${match.id}/play`}>
+                <Smartphone /> Enter hole by hole
+              </Link>
+            </Button>
           </CardContent>
         )}
       </Card>

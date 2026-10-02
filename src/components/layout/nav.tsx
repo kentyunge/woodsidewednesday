@@ -26,6 +26,9 @@ function useLinks({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer"
   return { links, active, pathname };
 }
 
+/** Full-screen flows (hole-by-hole scoring) hide the tab bar and install banner to fit one hole on screen. */
+export const isFocusedScreen = (pathname: string) => /^\/matches\/\d+\/play$/.test(pathname);
+
 export function useSignOut() {
   const router = useRouter();
   return async () => {
@@ -84,7 +87,8 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
 
 /** App-style tab bar pinned to the bottom of the screen on phones. */
 export function BottomTabs({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer">) {
-  const { links, active } = useLinks({ isAdmin, hasGolfer });
+  const { links, active, pathname } = useLinks({ isAdmin, hasGolfer });
+  if (isFocusedScreen(pathname)) return null;
   return (
     <nav
       aria-label="Sections"

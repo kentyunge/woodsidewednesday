@@ -67,7 +67,9 @@ export function GolferDashboard({
             </div>
             {!next.bye && (
               <Button asChild>
-                <Link href={`/matches/${next.id}`}>{next.date <= t ? "Enter scores" : "View scorecard"}</Link>
+                <Link href={next.date <= t ? `/matches/${next.id}/play` : `/matches/${next.id}`}>
+                  {next.date <= t ? "Enter scores" : "View scorecard"}
+                </Link>
               </Button>
             )}
           </CardContent>

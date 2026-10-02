@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { today } from "@/lib/dates";
-import { resolveSeason, requirePageActor } from "@/server/session";
+import { getCurrentSeason, loadSeason } from "@/server/league";
+import { requirePageActor } from "@/server/session";
 
 /** Shortcut to tonight's card: the signed-in golfer's open match (as a regular or a sub). */
 export default async function PlayShortcut() {
   const actor = await requirePageActor();
-  const { data } = await resolveSeason();
+  const current = await getCurrentSeason();
+  const data = current ? await loadSeason(current.id) : null;
   const t = today();
   const mine = (data?.matches ?? []).filter(
     (m) =>

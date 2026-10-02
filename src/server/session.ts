@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getActor } from "./access";
@@ -18,10 +18,15 @@ export async function requirePageAdmin() {
   return actor;
 }
 
-/** Season from `?season=` or the current one. */
+/** Cookie holding the season last picked in the season dropdown (set by SeasonPicker). */
+export const SEASON_COOKIE = "season";
+
+/** Season from `?season=`, else the one last picked in the dropdown, else the current one. */
 export const resolveSeason = cache(async (param?: string | string[]) => {
-  const id = Number(Array.isArray(param) ? param[0] : param);
+  const fromUrl = Number(Array.isArray(param) ? param[0] : param);
+  const remembered = Number((await cookies()).get(SEASON_COOKIE)?.value);
   const seasons = await getSeasons();
-  const season = (id && seasons.find((s) => s.id === id)) || (await getCurrentSeason());
+  const find = (id: number) => (id ? seasons.find((s) => s.id === id) : undefined);
+  const season = find(fromUrl) ?? find(remembered) ?? (await getCurrentSeason());
   return { seasons, season: season ?? null, data: season ? await loadSeason(season.id) : null };
 });

@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, Flag, Share, SquarePlus, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { isFocusedScreen } from "./nav";
 
 /** Chrome/Android's install event (not in the TS DOM types). */
 interface InstallEvent extends Event {
@@ -121,8 +123,9 @@ export function InstallPrompt() {
   const dismissedBefore = useSyncExternalStore(noop, dismissedRecently, () => true);
   const [dismissed, setDismissed] = useState(false);
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
-  if (!platform || dismissedBefore || dismissed) return null;
+  if (!platform || dismissedBefore || dismissed || isFocusedScreen(pathname)) return null;
 
   const dismiss = () => {
     setDismissed(true);

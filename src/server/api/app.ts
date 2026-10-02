@@ -10,6 +10,7 @@ import { HttpError, notFound } from "../errors";
 import { getCurrentSeason, getSeasons, loadSeason } from "../league";
 import { clearEntry, editAccess, getMatch, saveEntry } from "../scores";
 import { golferRounds, listSubs } from "../golfers";
+import { importSeason, SeasonImport } from "../season-import";
 import * as recap from "../recap";
 import { golferSeasonStats, leagueStats } from "../stats";
 import * as S from "./schemas";
@@ -158,6 +159,26 @@ api.openapi(
   async (c) => {
     requireAdmin(c.get("actor"));
     return c.json(await admin.createSeason(c.req.valid("json")), 200);
+  },
+);
+
+api.openapi(
+  route({
+    method: "post",
+    path: "/seasons/import",
+    tags: ["Seasons"],
+    summary: "Import a finished season",
+    description:
+      "Creates a season with its players, carried-over rounds, schedule and hole-by-hole cards in one transaction. Regulars are matched by email; subs by name (new ones are created). Pass dryRun=true to check the file without saving.",
+    request: {
+      query: z.object({ dryRun: z.enum(["true", "false"]).optional() }),
+      ...body(SeasonImport),
+    },
+    responses: json(S.SeasonImportResult),
+  }),
+  async (c) => {
+    requireAdmin(c.get("actor"));
+    return c.json(await importSeason(c.req.valid("json"), { dryRun: c.req.valid("query").dryRun === "true" }), 200);
   },
 );
 

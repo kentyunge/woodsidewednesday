@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/dates";
 import { listSeasonSummaries } from "@/server/admin";
+import { ImportSeasonButton } from "./import-season";
 import { NewSeasonButton } from "./new-season";
 
 export const metadata = { title: "Admin" };
@@ -15,7 +16,8 @@ export default async function AdminSeasonsPage() {
       <CardHeader>
         <CardTitle>Seasons</CardTitle>
         <CardDescription>Pick a season to manage its details, players and schedule.</CardDescription>
-        <CardAction>
+        <CardAction className="flex gap-2">
+          <ImportSeasonButton />
           <NewSeasonButton />
         </CardAction>
       </CardHeader>

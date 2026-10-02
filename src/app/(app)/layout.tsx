@@ -1,4 +1,4 @@
-import { Nav } from "@/components/layout/nav";
+import { BottomTabs, Nav } from "@/components/layout/nav";
 import { requirePageActor } from "@/server/session";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -6,7 +6,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <Nav name={actor.name} isAdmin={actor.isAdmin} hasGolfer={actor.golferId !== null} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 sm:px-4 sm:py-6">{children}</main>
+      {/* On phones, leave room for the bottom tab bar and the home indicator. */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-4 sm:pt-6 md:pb-6">
+        {children}
+      </main>
+      <BottomTabs isAdmin={actor.isAdmin} hasGolfer={actor.golferId !== null} />
     </>
   );
 }

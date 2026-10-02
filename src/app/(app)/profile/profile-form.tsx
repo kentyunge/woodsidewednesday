@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSignOut } from "@/components/layout/nav";
 import { api } from "@/lib/api-client";
 
 interface Props {
@@ -21,6 +23,7 @@ interface Props {
 
 export function ProfileForm(props: Props) {
   const router = useRouter();
+  const signOut = useSignOut();
   const [name, setName] = useState(props.name);
   const [username, setUsername] = useState(props.username);
   const [phone, setPhone] = useState(props.phone);
@@ -145,6 +148,9 @@ export function ProfileForm(props: Props) {
           </form>
         </CardContent>
       </Card>
+      <Button variant="outline" className="w-full sm:w-auto" onClick={signOut}>
+        <LogOut /> Sign out
+      </Button>
     </>
   );
 }

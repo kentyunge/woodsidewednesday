@@ -302,7 +302,7 @@ export function ScoreEntry({ match, holes, par, provisionalPercent, isAdmin, sub
           )}
         </div>
 
-        <div className="bg-background/95 sticky bottom-0 -mx-3 border-t px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:p-0">
+        <div className="bg-background/95 sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] -mx-3 border-t px-3 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:p-0">
           <Button onClick={save} disabled={saving} size="lg" className="w-full sm:w-auto">
             <Save /> {saving ? "Saving…" : "Save scores"}
           </Button>

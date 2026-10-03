@@ -53,6 +53,14 @@ function sidesPlayedBy(data: SeasonData, golferId: number) {
   return out.sort((x, y) => x.match.weekNumber - y.match.weekNumber);
 }
 
+/**
+ * A round's net for stats: gross minus the golfer's own handicap that night. (The match's net
+ * only subtracts strokes received, i.e. the handicap difference, so the lower handicap's equals gross.)
+ */
+function netScore(gross: number | null | undefined, handicap: number | null) {
+  return gross == null || handicap == null ? null : gross - handicap;
+}
+
 export function golferSeasonStats(data: SeasonData, golferId: number): GolferSeasonStats {
   const g = data.golfers.get(golferId);
   const standing = data.standings.find((s) => s.golfer.id === golferId);
@@ -86,7 +94,8 @@ export function golferSeasonStats(data: SeasonData, golferId: number): GolferSea
     }
     const totals = r?.[mine];
     if (totals?.gross != null) grosses.push(totals.gross);
-    if (totals?.net != null && r?.complete) nets.push(totals.net);
+    const net = netScore(totals?.gross, side.handicap.handicap);
+    if (net != null) nets.push(net);
     roundsList.push({
       matchId: match.id,
       weekNumber: match.weekNumber,
@@ -94,7 +103,7 @@ export function golferSeasonStats(data: SeasonData, golferId: number): GolferSea
       opponent: theirs ? theirs.owner : null,
       subFor: side.status === "sub" ? side.owner : null,
       gross: isComplete(side.scores, data.holes.length) ? side.scores.reduce((s, v) => s + v, 0) : null,
-      net: r?.complete ? (totals?.net ?? null) : null,
+      net,
       handicap: side.handicap.handicap,
       points: r?.complete ? (totals?.points ?? null) : null,
       opponentPoints: r?.complete ? (r[mine === "a" ? "b" : "a"].points ?? null) : null,
@@ -192,9 +201,10 @@ export function leagueStats(data: SeasonData): LeagueStats {
           if (!lowGross || totals.gross < lowGross.value) lowGross = { golfer: side.player, value: totals.gross, detail };
           if (!wg || totals.gross < wg.value) wg = { golfer: side.player, value: totals.gross };
         }
-        if (m.result?.complete && totals?.net != null) {
-          if (!lowNet || totals.net < lowNet.value) lowNet = { golfer: side.player, value: totals.net, detail };
-          if (!wn || totals.net < wn.value) wn = { golfer: side.player, value: totals.net };
+        const net = netScore(totals?.gross, side.handicap.handicap);
+        if (net != null) {
+          if (!lowNet || net < lowNet.value) lowNet = { golfer: side.player, value: net, detail };
+          if (!wn || net < wn.value) wn = { golfer: side.player, value: net };
         }
         if (m.result?.complete && side.pointsAwarded && (!bestWeek || side.pointsAwarded > bestWeek.value)) {
           bestWeek = { golfer: side.owner, value: side.pointsAwarded, detail };

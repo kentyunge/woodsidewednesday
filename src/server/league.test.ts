@@ -25,6 +25,7 @@ import { buildRecapFacts } from "./recap/facts";
 import { renderRecapEmail } from "./recap/email";
 import { completeWeek, reopenWeek } from "./recap";
 import { editAccess, saveEntry } from "./scores";
+import { golferSeasonStats, leagueStats } from "./stats";
 
 const admin: Actor = { userId: "admin-user", name: "Admin", email: "a@x", username: null, isAdmin: true, golferId: null };
 const card = (over: number) => {
@@ -148,6 +149,22 @@ describe("league flow", () => {
     const cRow = data.standings.find((s) => s.golfer.id === ids[2])!;
     expect(cRow.points).toBe(sub.pointsAwarded);
     expect(data.history.get(sub.player!.id)).toHaveLength(1);
+  });
+
+  it("reports net as gross minus the golfer's own handicap, even for the lower handicap", async () => {
+    const data = await loadSeason(seasonId);
+    for (const id of [ids[0], ids[1]]) {
+      const stats = golferSeasonStats(data, id);
+      const round = stats.roundsList.find((r) => r.weekNumber === scoredWeek)!;
+      expect(round.net).toBe(round.gross! - round.handicap!);
+      expect(stats.avgNet).toBe(stats.avgGross! - round.handicap!);
+    }
+    // B is the lower handicap (5), so the match gives B no strokes, but B's net still drops by 5.
+    const b = golferSeasonStats(data, ids[1]).roundsList.find((r) => r.weekNumber === scoredWeek)!;
+    expect(b.handicap).toBe(5);
+    expect(b.net).toBe(b.gross! - 5);
+    const week = leagueStats(data).weeklyLows.find((w) => w.weekNumber === scoredWeek)!;
+    expect(week.net!.value).toBeLessThan(week.gross!.value);
   });
 
   it("builds recap facts judged against each golfer's own game", async () => {

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { StrokeDots } from "@/components/league/score-mark";
 import { api } from "@/lib/api-client";
+import { formatDate } from "@/lib/dates";
 import { roundHandicap, scoreMatch, type Hole } from "@/lib/scoring";
 import { cn, fmt } from "@/lib/utils";
 import type { MatchView, ResolvedSide } from "@/server/league";
@@ -47,10 +48,11 @@ interface Props {
   isAdmin: boolean;
   subOptions: { id: number; name: string; isSub: boolean }[];
   ghostOptions: { id: number; name: string }[];
-  lockDate: string;
+  /** Golfers can enter scores until midnight at the end of this day. */
+  matchDate: string;
 }
 
-export function ScoreEntry({ match, holes, par, provisionalPercent, isAdmin, subOptions, ghostOptions, lockDate }: Props) {
+export function ScoreEntry({ match, holes, par, provisionalPercent, isAdmin, subOptions, ghostOptions, matchDate }: Props) {
   const router = useRouter();
   const sides = useMemo(() => [match.a, ...(match.b ? [match.b] : [])], [match]);
   const [state, setState] = useState<SideState[]>(() => sides.map((s) => initial(s, holes.length)));
@@ -132,7 +134,8 @@ export function ScoreEntry({ match, holes, par, provisionalPercent, isAdmin, sub
       <CardHeader>
         <CardTitle>Enter scores</CardTitle>
         <CardDescription>
-          Enter gross strokes for both players. The latest save wins{isAdmin ? "" : `; open until ${lockDate}`}.
+          Enter gross strokes for both players. The latest save wins
+          {isAdmin ? "" : `; golfers can enter scores until midnight on ${formatDate(matchDate, { weekday: "short", month: "short", day: "numeric" })}`}.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 px-3 sm:px-6">

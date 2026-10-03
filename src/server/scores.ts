@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { matchEntries, matches, weeks } from "@/db/schema";
-import { today } from "@/lib/dates";
+import { formatDate, today } from "@/lib/dates";
 import { isComplete } from "@/lib/scoring";
 import type { Actor } from "./access";
 import { createGolfer } from "./admin";
@@ -37,7 +37,9 @@ export function editAccess(actor: Actor | null, match: MatchView, week: WeekView
   const inMatch = actor.golferId !== null && [match.a.owner.id, match.b?.owner.id].includes(actor.golferId);
   if (!inMatch) return { allowed: false, reason: "Only golfers in this match can enter scores" };
   if (week.closed) return { allowed: false, reason: "This week has been marked complete; ask the admin to change scores" };
-  if (today() >= week.lockDate) return { allowed: false, reason: `Scores locked on ${week.lockDate}; ask the admin` };
+  if (today() >= week.lockDate) {
+    return { allowed: false, reason: `Score entry closed at midnight on ${formatDate(week.date, { weekday: "short", month: "short", day: "numeric" })}; ask the admin to make changes` };
+  }
   return { allowed: true, admin: false };
 }
 

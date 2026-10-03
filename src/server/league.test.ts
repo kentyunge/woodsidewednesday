@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -242,15 +242,25 @@ describe("league flow", () => {
     expect((await loadSeason(seasonId)).weeks.find((w) => w.id === week.id)!.closed).toBe(false);
   });
 
-  it("locks golfer edits at the next week's date", async () => {
+  it("locks golfer edits at midnight after the match date", async () => {
     const data = await loadSeason(seasonId);
     const w = data.weeks[0];
     const m = w.matches[0];
     const golfer: Actor = { ...admin, isAdmin: false, golferId: m.a.owner.id };
-    expect(w.lockDate).toBe("2026-05-13");
-    expect(editAccess(golfer, m, w)).toMatchObject({ allowed: false }); // today is past 2026-05-13
+    expect(w.date).toBe("2026-05-06");
+    expect(w.lockDate).toBe("2026-05-07");
+    try {
+      // League time is America/Chicago (CDT, UTC-5) in the tests.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-05-07T04:59:00Z")); // 11:59pm on match night
+      expect(editAccess(golfer, m, w)).toMatchObject({ allowed: true });
+      vi.setSystemTime(new Date("2026-05-07T05:01:00Z")); // 12:01am the next day
+      expect(editAccess(golfer, m, w)).toMatchObject({ allowed: false, reason: expect.stringContaining("midnight") });
+      expect(editAccess(admin, m, w)).toMatchObject({ allowed: true, admin: true });
+    } finally {
+      vi.useRealTimers();
+    }
     expect(editAccess({ ...golfer, golferId: -1 }, m, w)).toMatchObject({ allowed: false });
-    expect(editAccess(admin, m, w)).toMatchObject({ allowed: true });
   });
 
   it("postpones a week and everything after it", async () => {

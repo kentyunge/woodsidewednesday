@@ -82,7 +82,7 @@ export default async function MatchPage({ params }: PageProps<"/matches/[id]">) 
           isAdmin={access.admin}
           subOptions={subOptions}
           ghostOptions={ghostCandidates(data, match)}
-          lockDate={week.lockDate}
+          matchDate={week.date}
         />
       ) : (
         !match.bye && (

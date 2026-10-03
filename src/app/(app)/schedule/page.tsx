@@ -7,7 +7,8 @@ import { MatchRow } from "@/components/league/match-row";
 import { SeasonPicker } from "@/components/league/season-picker";
 import { formatDate, today } from "@/lib/dates";
 import { cn } from "@/lib/utils";
-import { splitWeeks } from "@/lib/weeks";
+import { isLive, splitWeeks } from "@/lib/weeks";
+import { LiveRefresh } from "@/components/league/live-refresh";
 import type { WeekView } from "@/server/league";
 import { requirePageActor, resolveSeason } from "@/server/session";
 
@@ -16,6 +17,7 @@ export const metadata = { title: "Schedule" };
 function WeekCard({ week, current, golferId }: { week: WeekView; current?: boolean; golferId: number | null }) {
   const t = today();
   const open = !week.closed && week.date <= t && t < week.lockDate;
+  const live = isLive(week, t);
   return (
     <Card className={cn("gap-3", current && "border-primary/50 ring-primary/20 ring-2")}>
       <CardHeader>
@@ -30,7 +32,7 @@ function WeekCard({ week, current, golferId }: { week: WeekView; current?: boole
         </CardDescription>
         <CardAction className="flex gap-1">
           {week.postponements > 0 && !week.closed && <Badge variant="outline">Postponed</Badge>}
-          {week.closed ? <Badge variant="secondary">Final</Badge> : open ? <Badge>Scores open</Badge> : null}
+          {week.closed ? <Badge variant="secondary">Final</Badge> : live ? <LiveRefresh /> : open ? <Badge>Scores open</Badge> : null}
         </CardAction>
       </CardHeader>
       <CardContent className="px-0">
@@ -41,7 +43,7 @@ function WeekCard({ week, current, golferId }: { week: WeekView; current?: boole
         ) : (
           <div className="divide-y border-y">
             {week.matches.map((m) => (
-              <MatchRow key={m.id} match={m} highlight={golferId} />
+              <MatchRow key={m.id} match={m} highlight={golferId} live={live} />
             ))}
           </div>
         )}

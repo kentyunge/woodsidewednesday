@@ -7,7 +7,9 @@ import { MatchRow } from "@/components/league/match-row";
 import { SeasonPicker } from "@/components/league/season-picker";
 import { StandingsTable } from "@/components/league/standings-table";
 import { StatTile } from "@/components/league/stat-tile";
-import { formatDate } from "@/lib/dates";
+import { formatDate, today } from "@/lib/dates";
+import { isLive } from "@/lib/weeks";
+import { LiveRefresh } from "@/components/league/live-refresh";
 import { fmt, cn } from "@/lib/utils";
 import { requirePageActor, resolveSeason } from "@/server/session";
 import { leagueStats, type Leader } from "@/server/stats";
@@ -63,6 +65,7 @@ export default async function LeaguePage({ searchParams }: PageProps<"/">) {
 
   const stats = leagueStats(data);
   const week = featuredWeek(data.weeks);
+  const live = !!week && isLive(week, today());
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -107,6 +110,7 @@ export default async function LeaguePage({ searchParams }: PageProps<"/">) {
             <CardTitle>
               {week ? `Week ${week.number}` : "Schedule"}
               {week?.kind === "position" && <span className="text-primary ml-2 text-sm">Position night</span>}
+              {live && <span className="ml-2 align-middle"><LiveRefresh /></span>}
             </CardTitle>
             <CardDescription>
               {week ? formatDate(week.date, { weekday: "long", month: "long", day: "numeric" }) : "No weeks scheduled"}
@@ -125,7 +129,7 @@ export default async function LeaguePage({ searchParams }: PageProps<"/">) {
               </p>
             )}
             <div className="divide-y border-y">
-              {week?.matches.map((m) => <MatchRow key={m.id} match={m} highlight={actor.golferId} />)}
+              {week?.matches.map((m) => <MatchRow key={m.id} match={m} highlight={actor.golferId} live={live} />)}
             </div>
           </CardContent>
         </Card>

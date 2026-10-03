@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, CloudOff, Loader2, Minus, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CloudOff, Loader2, Lock, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StrokeDots } from "@/components/league/score-mark";
 import { roundHandicap, scoreMatch, type Hole } from "@/lib/scoring";
@@ -11,7 +11,7 @@ import { cn, fmt } from "@/lib/utils";
 import type { MatchView, ResolvedSide } from "@/server/league";
 
 type Scores = (number | null)[];
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "saving" | "saved" | "error" | "locked";
 
 interface Props {
   match: MatchView;
@@ -67,6 +67,11 @@ export function HoleByHole({ match, holes, par, provisionalPercent }: Props) {
             credentials: "same-origin",
             keepalive: opts.keepalive,
           });
+          if (res.status === 403) {
+            // Entry closed (midnight after the match) or the week was marked complete: retrying won't help.
+            setSaveState("locked");
+            return false;
+          }
           if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Save failed");
         }
         setSaveState("saved");
@@ -279,6 +284,12 @@ function SaveStatus({ state }: { state: SaveState }) {
     return (
       <span className="text-primary inline-flex items-center gap-1 text-xs">
         <Check className="size-3.5" /> Saved
+      </span>
+    );
+  if (state === "locked")
+    return (
+      <span className="text-destructive inline-flex items-center gap-1 text-xs">
+        <Lock className="size-3.5" /> Locked, ask the admin
       </span>
     );
   if (state === "error")

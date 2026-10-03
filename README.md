@@ -26,7 +26,7 @@ Expected cost: **$0/month** on the free tiers (Vercel Hobby, Neon Free, Resend F
 - **Standings** ties are broken by a random draw fixed per season.
 - **Schedule**: round robin (everyone plays everyone once), then **position night** (1v2, 3v4…) paired from standings.
 - **Rainouts**: "Postpone" pushes that week and all later weeks back a week.
-- **Score entry**: either golfer in a match can enter both cards until the next week's date (so makeups can be entered late). The latest save wins. The admin can always edit and override handicaps.
+- **Score entry**: either golfer in a match can enter both cards until midnight (league time) at the end of the match day. After that, only the admin can enter or change scores, including makeups played later in the week. The latest save wins. The admin can always edit and override handicaps.
 - All percentages and round counts are editable per season.
 
 ## Local development

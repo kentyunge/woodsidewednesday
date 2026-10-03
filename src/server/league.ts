@@ -66,7 +66,7 @@ export interface MatchView {
 
 export interface WeekView extends Week {
   matches: MatchView[];
-  /** Golfers (non-admin) can enter scores until this date. */
+  /** First day golfers (non-admin) can no longer enter scores: the day after the match, so entry closes at midnight league time. */
   lockDate: string;
   complete: boolean;
   /** The admin marked the week complete. */
@@ -342,12 +342,12 @@ export async function loadSeason(seasonId: number): Promise<SeasonData> {
     };
   });
 
-  const weekViews: WeekView[] = weekRows.map((w, i) => {
+  const weekViews: WeekView[] = weekRows.map((w) => {
     const ms = matchViews.filter((m) => m.weekId === w.id);
     return {
       ...w,
       matches: ms,
-      lockDate: weekRows[i + 1]?.date ?? addDays(w.date, 7),
+      lockDate: addDays(w.date, 1),
       complete: ms.length > 0 && ms.every((m) => m.complete),
       closed: w.closedAt !== null,
     };

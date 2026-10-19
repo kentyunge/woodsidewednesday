@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Flag, LayoutDashboard, LogOut, Settings, Shield, User, UserCircle, Users } from "lucide-react";
@@ -86,9 +87,43 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
 }
 
 /** App-style tab bar pinned to the bottom of the screen on phones. */
+/** The on-screen keyboard is up: the visual viewport is much shorter than the layout viewport. */
+function subscribeViewport(onChange: () => void) {
+  const vv = window.visualViewport;
+  vv?.addEventListener("resize", onChange);
+  return () => vv?.removeEventListener("resize", onChange);
+}
+const keyboardOpenNow = () => !!window.visualViewport && window.innerHeight - window.visualViewport.height > 150;
+
+/**
+ * iOS home-screen apps sometimes leave fixed elements stranded mid-screen after the keyboard closes
+ * (most often when a page change happens while it's still open) until the page is scrolled.
+ * A 1px scroll and back makes Safari re-measure the viewport.
+ */
+function nudgeViewport() {
+  requestAnimationFrame(() => {
+    window.scrollBy(0, 1);
+    window.scrollBy(0, -1);
+  });
+}
+
+function useStableFixedPositions() {
+  const keyboardOpen = useSyncExternalStore(subscribeViewport, keyboardOpenNow, () => false);
+  const pathname = usePathname();
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !keyboardOpen) nudgeViewport();
+    wasOpen.current = keyboardOpen;
+  }, [keyboardOpen]);
+  useEffect(nudgeViewport, [pathname]);
+  return { keyboardOpen };
+}
+
 export function BottomTabs({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer">) {
   const { links, active, pathname } = useLinks({ isAdmin, hasGolfer });
-  if (isFocusedScreen(pathname)) return null;
+  const { keyboardOpen } = useStableFixedPositions();
+  // Hidden while typing (like native apps), so it never floats on top of the keyboard.
+  if (isFocusedScreen(pathname) || keyboardOpen) return null;
   return (
     <nav
       aria-label="Sections"

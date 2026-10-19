@@ -67,6 +67,8 @@ function DeleteSeason({ season, players, weeks, scores }: Props) {
             variant="destructive"
             disabled={busy || !canDelete}
             onClick={async () => {
+              // Close the keyboard before leaving the page; iOS can otherwise leave the layout shifted.
+              (document.activeElement as HTMLElement | null)?.blur();
               const ok = await run(() => api(`/seasons/${season.id}`, { method: "DELETE" }), `${season.name} deleted`);
               if (ok) {
                 setOpen(false);

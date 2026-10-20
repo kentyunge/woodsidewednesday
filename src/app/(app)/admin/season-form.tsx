@@ -40,7 +40,7 @@ export const fromForm = (f: SeasonForm) => ({
 
 export function SeasonFields({ form, set }: { form: SeasonForm; set: (f: SeasonForm) => void }) {
   const field = (k: keyof SeasonForm, label: string, props: React.ComponentProps<typeof Input> = {}) => (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label htmlFor={k}>{label}</Label>
       <Input id={k} value={form[k]} onChange={(e) => set({ ...form, [k]: e.target.value })} required {...props} />
     </div>
@@ -50,7 +50,7 @@ export function SeasonFields({ form, set }: { form: SeasonForm; set: (f: SeasonF
       {field("name", "Name")}
       {field("year", "Year", { inputMode: "numeric" })}
       {field("startDate", "First week", { type: "date" })}
-      <div className="space-y-1.5">
+      <div className="min-w-0 space-y-1.5">
         <Label htmlFor="status">Status</Label>
         <NativeSelect id="status" value={form.status} onChange={(e) => set({ ...form, status: e.target.value as Season["status"] })}>
           <option value="upcoming">Upcoming</option>

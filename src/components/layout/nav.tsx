@@ -45,7 +45,7 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
   const signOut = useSignOut();
 
   return (
-    <header className="bg-primary text-primary-foreground sticky top-0 z-40 pt-[env(safe-area-inset-top)] shadow-sm">
+    <header className="bg-primary text-primary-foreground z-40 shrink-0 pt-[env(safe-area-inset-top)] shadow-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <Flag className="size-5" />
@@ -127,7 +127,7 @@ export function BottomTabs({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "h
   return (
     <nav
       aria-label="Sections"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 z-40 shrink-0 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <div className="flex">
         {links.map((l) => {

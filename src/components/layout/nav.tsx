@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Flag, LayoutDashboard, LogOut, Settings, Shield, User, UserCircle, Users } from "lucide-react";
@@ -45,7 +45,7 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
   const signOut = useSignOut();
 
   return (
-    <header className="bg-primary text-primary-foreground sticky top-0 z-40 pt-[env(safe-area-inset-top)] shadow-sm">
+    <header className="bg-primary text-primary-foreground shrink-0 pt-[env(safe-area-inset-top)] shadow-sm">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <Flag className="size-5" />
@@ -86,7 +86,6 @@ export function Nav({ name, isAdmin, hasGolfer }: NavProps) {
   );
 }
 
-/** App-style tab bar pinned to the bottom of the screen on phones. */
 /** The on-screen keyboard is up: the visual viewport is much shorter than the layout viewport. */
 function subscribeViewport(onChange: () => void) {
   const vv = window.visualViewport;
@@ -95,39 +94,21 @@ function subscribeViewport(onChange: () => void) {
 }
 const keyboardOpenNow = () => !!window.visualViewport && window.innerHeight - window.visualViewport.height > 150;
 
-/**
- * iOS home-screen apps sometimes leave fixed elements stranded mid-screen after the keyboard closes
- * (most often when a page change happens while it's still open) until the page is scrolled.
- * A 1px scroll and back makes Safari re-measure the viewport.
- */
-function nudgeViewport() {
-  requestAnimationFrame(() => {
-    window.scrollBy(0, 1);
-    window.scrollBy(0, -1);
-  });
-}
-
-function useStableFixedPositions() {
+function useKeyboardOpen() {
   const keyboardOpen = useSyncExternalStore(subscribeViewport, keyboardOpenNow, () => false);
-  const pathname = usePathname();
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    if (wasOpen.current && !keyboardOpen) nudgeViewport();
-    wasOpen.current = keyboardOpen;
-  }, [keyboardOpen]);
-  useEffect(nudgeViewport, [pathname]);
-  return { keyboardOpen };
+  return keyboardOpen;
 }
 
+/** App-style tab bar at the bottom of the screen on phones. */
 export function BottomTabs({ isAdmin, hasGolfer }: Pick<NavProps, "isAdmin" | "hasGolfer">) {
   const { links, active, pathname } = useLinks({ isAdmin, hasGolfer });
-  const { keyboardOpen } = useStableFixedPositions();
+  const keyboardOpen = useKeyboardOpen();
   // Hidden while typing (like native apps), so it never floats on top of the keyboard.
   if (isFocusedScreen(pathname) || keyboardOpen) return null;
   return (
     <nav
       aria-label="Sections"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 shrink-0 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <div className="flex">
         {links.map((l) => {

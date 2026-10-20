@@ -24,8 +24,8 @@ export function PreviousScores({ rows, onChange }: { rows: ScoreRow[]; onChange:
   return (
     <div className="space-y-2">
       {rows.map((r, i) => (
-        <div key={i} className="grid grid-cols-[1fr_5.5rem_auto] items-center gap-2">
-          <Input type="date" max={max} value={r.playedOn} onChange={(e) => set(i, { playedOn: e.target.value })} aria-label={`Date ${i + 1}`} />
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_4.5rem_auto] items-center gap-2">
+          <Input type="date" max={max} className="min-w-0 appearance-none" value={r.playedOn} onChange={(e) => set(i, { playedOn: e.target.value })} aria-label={`Date ${i + 1}`} />
           <Input
             inputMode="numeric"
             placeholder="Score"
